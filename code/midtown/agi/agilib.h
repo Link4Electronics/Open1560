@@ -104,29 +104,6 @@ public:
         return index;
     }
 
-    i32 Add(Param& param, i32 count)
-    {
-        i32 index = Lookup(param.Name);
-
-        if (index == 0)
-        {
-            ArAssert(count_ + count <= agiLibMax, "Too many values");
-
-            Insert(param.Name, count_ + 1);
-
-            for (i32 i = 0; i < count; ++i)
-            {
-                params_[count_ + i] = new Param(param);
-                defs_[count_ + i] = nullptr;
-            }
-
-            index = count_ + 1;
-            count_ += count;
-        }
-
-        return index;
-    }
-
     void Load(Stream* input)
     {
         Kill();
