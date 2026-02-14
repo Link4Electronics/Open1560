@@ -1,6 +1,7 @@
 import struct
 import itertools
 import json
+import hashlib
 
 # o_*
 op_types = {
@@ -123,6 +124,8 @@ udm_frbtypes = {
     12: 'CUSTOM',
 }
 
+image_base = idaapi.get_imagebase()
+
 def sext64(v):
     sign = 0x8000000000000000
     if v >= sign:
@@ -168,8 +171,11 @@ def get_sym_name(ea):
             name = renames[name]
         else:
             flags = ida_bytes.get_full_flags(ea)
-            if not ida_bytes.has_dummy_name(flags) and not (name.startswith('?') or name.startswith('_')):
+            if (not ida_bytes.has_dummy_name(flags) and not (name.startswith('?') or name.startswith('_'))) or (':' in name):
                 name = f'sym_{ea:X}'
+            if len(name) > 240:
+                h = hashlib.sha256(name.encode('utf-8')).hexdigest().upper()
+                name = f'sym_{h}'
     all_seen[ea] = name
     return name
 
@@ -225,9 +231,11 @@ class MasmPrinter:
     def indent(self, level):
         self._indent += level
 
-    def line(self, value = ''):
+    def line(self, value = '', allow_empty=True):
         self.write(value)
-        self.write('\n')
+
+        if allow_empty or not self._newline:
+            self.write('\n')
 
     def hex(self, value, force_sign=False):
         value = sext64(value)
@@ -250,12 +258,12 @@ class MasmPrinter:
     def write_bytes(self, data, offset, length, per_line = 32):
         for i in range(length):
             if i % per_line:
-                p.write(',')
+                self.write(',')
             else:
                 if i:
-                    p.line()
-                p.write('db ')
-            p.hex(data[offset + i])
+                    self.line()
+                self.write('db ')
+            self.hex(data[offset + i])
 
 def print_operand(insn, op, oi, ftype):
     ea = insn.ea
@@ -464,7 +472,7 @@ def print_insn(ea, flags):
     if insn.auxpref & 0x2:
         if insn_mnem == 'cmps':
             p.write('repe ')
-        else:
+        elif insn_mnem != 'retn':
             p.write('rep ')
     if insn.auxpref & 0x4:
         p.write('repne ')
@@ -528,12 +536,14 @@ def print_strlit(ea, size):
 
     for v in data:
         if new_line:
+            if in_quotes:
+                p.write('\'')
+                in_quotes = False
             if this_line:
                 p.line()
             p.write('db ')
             new_line = False
             this_line = 0
-            assert not in_quotes
 
         if v in valid_chars:
             if not in_quotes:
@@ -552,11 +562,26 @@ def print_strlit(ea, size):
             if v in [0, 10]:
                 new_line = True
         this_line += 1
+        if this_line > 250:
+            new_line = True
 
     if in_quotes:
         p.write('\'')
 
     return p
+
+def print_target_disp(p, target, disp):
+    if target is not None:
+        if disp == -image_base:
+            p.write('imagerel ')
+            p.write(target)
+        else:
+            p.write('offset ')
+            p.write(target)
+            if disp != 0:
+                p.hex(disp, force_sign=True)
+    else:
+        p.hex(disp)
 
 def print_type(p, data, offset, tinfo):
     ty_decl = tinfo.get_realtype()
@@ -565,16 +590,8 @@ def print_type(p, data, offset, tinfo):
     if ida_typeinf.is_type_ptr(ty_decl):
         value, = struct.unpack_from('<I', data, offset)
         target, disp = resolve_imm(BADADDR, value, None, ida_bytes.FF_N_VOID, force_addr=True)
-
         p.write('dd ')
-
-        if target is not None:
-            p.write('offset ')
-            p.write(target)
-            if disp != 0:
-                p.hex(disp, force_sign=True)
-        else:
-            p.hex(disp)
+        print_target_disp(p, target, disp)
     elif ida_typeinf.is_type_struct(ty_decl):
         print_struct(p, data, offset, tinfo.get_tid())
     elif ida_typeinf.is_type_union(ty_decl):
@@ -593,7 +610,7 @@ def print_type(p, data, offset, tinfo):
         value, = struct.unpack_from('<I', data, offset)
         p.write('dd ')
         p.write(f'0{value:08X}r')
-    elif ida_typeinf.is_type_integral(ty_decl):
+    elif ida_typeinf.is_type_integral(ty_decl) or ida_typeinf.is_type_bitfld(ty_decl):
         if sz == 1:
             value, = struct.unpack_from('<B', data, offset)
             p.write('db ')
@@ -607,11 +624,11 @@ def print_type(p, data, offset, tinfo):
             assert False
         p.hex(value)
     else:
-        assert False, (str(ty), ty_decl)
+        assert False, ty_decl
 
-    p.line()
+    p.line(allow_empty=False)
 
-def print_struct(p, data, offset, tid):
+def print_struct(p, data, offset, tid, extra_size=0):
     tif = ida_typeinf.tinfo_t()
     if not tif.get_type_by_tid(tid) or not tif.is_udt():
         raise Exception("No structure with ID: 0x%x" % tid)
@@ -622,17 +639,42 @@ def print_struct(p, data, offset, tid):
         p.write_bytes(data, offset, udt.total_size)
         return
 
+    last_member = None
+
     for udm in udt:
+        last_member = udm
+
         rep = udm.repr
         rep_type = rep.bits & ida_typeinf.FRB_MASK
         tinfo = udm.type
+
+        if udm.is_bitfield():
+            bi = ida_typeinf.bitfield_type_data_t()
+            assert tinfo.get_bitfield_details(bi)
+            if udm.offset % (udm.effalign * 8):
+                continue
+            sz = bi.nbytes
+        else:
+            assert (udm.size % 8) == 0
+            sz = udm.size // 8
+
         assert (udm.offset % 8) == 0
-        assert (udm.size % 8) == 0
         off = udm.offset // 8
-        sz = udm.size // 8
         assert not udm.is_gap()
-        assert rep_type in [ida_typeinf.FRB_NUMH, ida_typeinf.FRB_NUMD, ida_typeinf.FRB_UNK]
+        assert rep_type in [ida_typeinf.FRB_NUMH, ida_typeinf.FRB_NUMD, ida_typeinf.FRB_OFFSET, ida_typeinf.FRB_UNK], rep_type
         print_type(p, data, offset + off, tinfo)
+
+    if extra_size:
+        assert tif.is_varstruct()
+        tinfo = last_member.type
+        off = last_member.offset // 8
+        assert tinfo.is_varmember()
+        inner = tinfo.get_array_element()
+        sz = inner.get_size()
+        assert (extra_size % sz) == 0
+        nelems = extra_size // sz
+        for i in range(nelems):
+            print_type(p, data, offset + off + (i * sz), inner)
 
     return p
 
@@ -646,8 +688,16 @@ def print_data(ea, flags, seg):
         oi = None
 
     elsize = ida_bytes.get_data_elsize(ea, flags, oi)
-    assert (size % elsize) == 0 # TODO: Handle structs with variable length array
-    nelems = size // elsize
+    extra_size = 0
+
+    if ida_bytes.is_varsize_item(ea, flags, oi):
+        assert dtype == FF_STRUCT
+        assert size >= elsize, (size, elsize)
+        nelems = 1
+        extra_size = size - elsize
+    else:
+        assert (size % elsize) == 0, (size, elsize)
+        nelems = size // elsize
 
     if dtype == FF_STRLIT:
         return print_strlit(ea, size)
@@ -658,7 +708,7 @@ def print_data(ea, flags, seg):
 
         if data:
             for i in range(nelems):
-                print_struct(p, data, i * elsize, oi.tid)
+                print_struct(p, data, i * elsize, oi.tid, extra_size)
         else:
             p.write(f'db {size} dup (?)')
 
@@ -677,7 +727,7 @@ def print_data(ea, flags, seg):
     if (dtype == FF_BYTE) and (len(groups) == 1) and (seg.perm & ida_segment.SEGPERM_EXEC):
         data, _ = groups[0]
         if (not data) or (data[0] in [0, 0x90, 0xCC]):
-            p.write('; PADDING')
+            p.write('db 0CCh ; PADDING')
             return p
 
     for i, (data, count) in enumerate(groups):
@@ -720,14 +770,7 @@ def print_data(ea, flags, seg):
             elif dtype == FF_DWORD:
                 value, = struct.unpack('<I', data)
                 target, disp = resolve_imm(ea, value, oi, ftype)
-
-                if target is not None:
-                    p.write('offset ')
-                    p.write(target)
-                    if disp != 0:
-                        p.hex(disp, force_sign=True)
-                else:
-                    p.hex(disp)
+                print_target_disp(p, target, disp)
             elif dtype == FF_FLOAT:
                 value, = struct.unpack('<I', data)
                 p.write(f'0{value:08X}r')
