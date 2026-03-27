@@ -81,12 +81,12 @@ public:
     asBirthRule BirthRule;
     i32 TexNumber;
 
-#define BANGER_BILL_FLAG_BILLBOARD_VLOW 0x1 // Draw as billboard for LOD 0
-#define BANGER_BILL_FLAG_BILLBOARD_LOW 0x2  // Draw as billboard for LOD 1
-#define BANGER_BILL_FLAG_BILLBOARD_MED 0x4  // Draw as billboard for LOD 2
-#define BANGER_BILL_FLAG_BILLBOARD_HIGH 0x8 // Draw as billboard for LOD 3
-#define BANGER_BILL_FLAG_NO_SHADOWS 0x10    // Disable shadows
-#define BANGER_BILL_FLAG_GLOW 0x20          // Draw glowing parts
+#define BANGER_BILL_FLAG_BILLBOARD_VLOW 0x1   // Draw as billboard for LOD 0
+#define BANGER_BILL_FLAG_BILLBOARD_LOW 0x2    // Draw as billboard for LOD 1
+#define BANGER_BILL_FLAG_BILLBOARD_MED 0x4    // Draw as billboard for LOD 2
+#define BANGER_BILL_FLAG_BILLBOARD_HIGH 0x8   // Draw as billboard for LOD 3
+#define BANGER_BILL_FLAG_NO_SHADOWS 0x10      // Disable shadows
+#define BANGER_BILL_FLAG_LOWER_HALF_GLOW 0x20 // Lower half is always glowing
 
     i32 BillFlags;
     i16 SpinAxis;
