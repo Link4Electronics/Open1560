@@ -30,7 +30,7 @@ function arts_component(name)
     includeARTS()
 
     filter { "configurations:Final", "toolset:not msc-ClangCL" }
-        flags "FatalWarnings"
+        fatalwarnings "All"
     filter {}
 end
 

@@ -51,14 +51,14 @@ workspace "Open1560"
         defines { "CI_BUILD_STRING=\"" .. build_string .. "\"" }
     end
 
-    flags "MultiProcessorCompile"
-
+    multiprocessorcompile "On"
     editAndContinue "Off"
     symbols "On"
     -- debugformat "c7"
     inlining "Auto"
     intrinsics "On"
     staticruntime "On"
+    incrementallink "Off"
 
     filter "kind:*App or SharedLib"
         targetdir "bin/%{prj.name}/%{cfg.platform}_%{cfg.buildcfg}"
@@ -73,7 +73,6 @@ workspace "Open1560"
     filter "configurations:Final"
         optimize "Full"
         defines { "NDEBUG", "ARTS_FINAL" }
-        flags { "NoIncrementalLink" }
         functionlevellinking "On"
 
     filter "platforms:Win32"

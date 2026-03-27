@@ -55,7 +55,8 @@ project "Open1560"
     warnings "Extra"
 
     filter "toolset:msc-v*"
-        flags { "FatalWarnings", "Maps" }
+        fatalwarnings "All"
+        mapfile "On"
     filter {}
 
     includeARTS()
