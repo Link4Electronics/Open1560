@@ -110,8 +110,19 @@ i32 agiGLPipeline::BeginGfx()
     }
 
     SDL_GetWindowSizeInPixels(window_, &horz_res_, &vert_res_);
-
     Displayf("Window Resolution: %u x %u", horz_res_, vert_res_);
+
+    int red_size = 0;
+    int green_size = 0;
+    int blue_size = 0;
+    int alpha_size = 0;
+    int depth_size = 0;
+    SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &red_size);
+    SDL_GL_GetAttribute(SDL_GL_GREEN_SIZE, &green_size);
+    SDL_GL_GetAttribute(SDL_GL_BLUE_SIZE, &blue_size);
+    SDL_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &alpha_size);
+    SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &depth_size);
+    Displayf("Color Bits: %i/%i/%i/%i, Depth Bits: %i", red_size, green_size, blue_size, alpha_size, depth_size);
 
     if (device_flags_1_ & 0x1)
     {
