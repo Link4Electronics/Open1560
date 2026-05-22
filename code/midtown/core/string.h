@@ -1,52 +1,187 @@
-/*
-    Open1560 - An Open Source Re-Implementation of Midtown Madness 1 Beta
-    Copyright (C) 2020 Brick
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
-
 #pragma once
 
 #include <cstdarg>
+#include <cstring>
+#include <cstdio>
+#include <cerrno>
 
 #include "memory/stub.h"
 
+// strerror_s (C11 Annex K, also provided by minwin_linux.h)
+inline int strerror_s(char* buf, usize size, int errnum) {
+    const char* msg = std::strerror(errnum);
+    std::strncpy(buf, msg, size);
+    buf[size - 1] = '\0';
+    return 0;
+}
+
+template <usize N>
+inline int strerror_s(char (&buf)[N], int errnum) {
+    return strerror_s(buf, N, errnum);
+}
+
 #define ARTS_TRUNCATE _TRUNCATE
 
-#define arts_sprintf sprintf_s
-#define arts_snprintf _snprintf_s
+#if defined(_MSC_VER)
 
-#define arts_vsprintf vsprintf_s
-#define arts_vsnprintf _vsnprintf_s
+#    define arts_sprintf sprintf_s
+#    define arts_snprintf _snprintf_s
 
-#define arts_vsscanf vsscanf_s
-#define arts_sscanf sscanf_s
+#    define arts_vsprintf vsprintf_s
+#    define arts_vsnprintf _vsnprintf_s
 
-#define arts_strcpy strcpy_s
-#define arts_strncpy strncpy_s
+#    define arts_vsscanf vsscanf_s
+#    define arts_sscanf sscanf_s
 
-#define arts_strcat strcat_s
-#define arts_strncat strncat_s
+#    define arts_strcpy strcpy_s
+#    define arts_strncpy strncpy_s
 
-#define arts_stricmp _stricmp
-#define arts_strnicmp _strnicmp
-#define arts_strupr _strupr_s
+#    define arts_strcat strcat_s
+#    define arts_strncat strncat_s
 
-#define arts_strtok strtok_s
+#    define arts_strtok strtok_s
+
+#    define arts_sprintf sprintf_s
+#    define arts_stricmp _stricmp
+#    define arts_strnicmp _strnicmp
+#    define arts_strupr strupr_s
+#    define arts_itoa _itoa_s
+#    define arts_ltoa _ltoa_s
+#    define arts_ultoa _ultoa_s
+#else
+
+// _TRUNCATE is used with MSVC secure string functions; define it as no-limit for Linux
+#ifndef _TRUNCATE
+#    define _TRUNCATE ((size_t)-1)
+#endif
+
+// Portable implementations for Linux
+inline int arts_sprintf(char* buffer, const char* format, ...) {
+    va_list va;
+    va_start(va, format);
+    int result = std::vsprintf(buffer, format, va);
+    va_end(va);
+    return result;
+}
+
+// 3-arg overload matching sprintf_s(buffer, size, format, ...)
+inline int arts_sprintf(char* buffer, size_t, const char* format, ...) {
+    va_list va;
+    va_start(va, format);
+    int result = std::vsprintf(buffer, format, va);
+    va_end(va);
+    return result;
+}
+
+template <size_t N>
+inline int arts_sprintf(char (&buffer)[N], const char* format, ...) {
+    va_list va;
+    va_start(va, format);
+    int result = std::vsnprintf(buffer, N, format, va);
+    va_end(va);
+    return result;
+}
+
+template <size_t N>
+inline int arts_snprintf(char (&buffer)[N], size_t count, const char* format, ...) {
+    va_list va;
+    va_start(va, format);
+    int result = std::vsnprintf(buffer, count, format, va);
+    va_end(va);
+    return result;
+}
+
+inline int arts_snprintf(char* buffer, size_t count, const char* format, ...) {
+    va_list va;
+    va_start(va, format);
+    int result = std::vsnprintf(buffer, count, format, va);
+    va_end(va);
+    return result;
+}
+
+inline int arts_vsprintf(char* buffer, const char* format, va_list va) {
+    return std::vsprintf(buffer, format, va);
+}
+
+template <size_t N>
+inline int arts_vsprintf(char (&buffer)[N], const char* format, va_list va) {
+    return std::vsnprintf(buffer, N, format, va);
+}
+
+template <size_t N>
+inline int arts_vsnprintf(char (&buffer)[N], size_t count, const char* format, va_list va) {
+    return std::vsnprintf(buffer, count, format, va);
+}
+
+inline int arts_vsscanf(const char* buffer, const char* format, va_list va) {
+    return std::vsscanf(buffer, format, va);
+}
+
+inline int arts_sscanf(const char* buffer, const char* format, ...) {
+    va_list va;
+    va_start(va, format);
+    int result = std::vsscanf(buffer, format, va);
+    va_end(va);
+    return result;
+}
+
+inline char* arts_strcpy(char* dest, const char* src) {
+    return std::strcpy(dest, src);
+}
+
+inline char* arts_strcpy(char* dest, size_t, const char* src) {
+    return std::strcpy(dest, src);
+}
+
+inline char* arts_strncpy(char* dest, const char* src, size_t count) {
+    if (count == (size_t)-1 || count >= SIZE_MAX / 2) {
+        size_t len = strlen(src);
+        memcpy(dest, src, len + 1);
+        return dest;
+    }
+    return std::strncpy(dest, src, count);
+}
+
+inline char* arts_strcat(char* dest, const char* src) {
+    return std::strcat(dest, src);
+}
+
+inline char* arts_strncat(char* dest, const char* src, size_t count) {
+    if (count == (size_t)-1 || count >= SIZE_MAX / 2) {
+        return std::strcat(dest, src);
+    }
+    return std::strncat(dest, src, count);
+}
+
+inline int arts_stricmp(const char* a, const char* b) {
+    return strcasecmp(a, b);
+}
+
+inline int arts_strnicmp(const char* a, const char* b, size_t n) {
+    return strncasecmp(a, b, n);
+}
+
+inline void arts_strupr(char* str, size_t len) {
+    for (size_t i = 0; i < len && str[i]; ++i) {
+        if (str[i] >= 'a' && str[i] <= 'z')
+            str[i] = str[i] - 'a' + 'A';
+    }
+}
+
+// Template overload for stack arrays (like MSVC's _strupr_s template)
+template <size_t N>
+inline void arts_strupr(char (&str)[N]) {
+    arts_strupr(str, N);
+}
+
+inline char* arts_strtok(char* str, const char* delimiters, char** context) {
+    return strtok_r(str, delimiters, context);
+}
+
+#endif
 
 // ?arts_strdup@@YAPADPBD@Z
-ARTS_EXPORT char* arts_strdup(const char* str); // StringDuplicate
+ARTS_EXPORT char* arts_strdup(const char* str);
 
 class ConstString
 {
@@ -84,14 +219,12 @@ public:
     ConstString& operator=(const char* value)
     {
         assign(value);
-
         return *this;
     }
 
     ConstString& operator=(const ConstString& value)
     {
         assign(value.data_);
-
         return *this;
     }
 
@@ -102,7 +235,6 @@ public:
 
         data_ = value.data_;
         value.data_ = nullptr;
-
         return *this;
     }
 
@@ -110,7 +242,6 @@ public:
     {
         if (data_)
             arts_free(data_);
-
         data_ = value ? arts_strdup(value) : nullptr;
     }
 
@@ -123,30 +254,13 @@ public:
         }
     }
 
-    char* get() noexcept
-    {
-        return data_;
-    }
+    char* get() noexcept { return data_; }
+    const char* get() const noexcept { return data_; }
 
-    const char* get() const noexcept
-    {
-        return data_;
-    }
+    char& operator[](usize index) noexcept { return data_[index]; }
+    const char& operator[](usize index) const noexcept { return data_[index]; }
 
-    char& operator[](usize index) noexcept
-    {
-        return data_[index];
-    }
-
-    const char& operator[](usize index) const noexcept
-    {
-        return data_[index];
-    }
-
-    explicit operator bool() const noexcept
-    {
-        return data_ != nullptr;
-    }
+    explicit operator bool() const noexcept { return data_ != nullptr; }
 
 private:
     char* data_ {};
@@ -156,11 +270,8 @@ static_assert(sizeof(ConstString) == sizeof(char*));
 
 ConstString arts_getenv(const char* name);
 
-class arts_format_t
-{};
-
-class arts_vformat_t
-{};
+class arts_format_t {};
+class arts_vformat_t {};
 
 template <usize N>
 class CStringBuffer
@@ -168,15 +279,8 @@ class CStringBuffer
 public:
     static_assert(N != 0, "Cannot have an empty string buffer");
 
-    CStringBuffer()
-    {
-        buffer_[0] = '\0';
-    }
-
-    CStringBuffer(const char* value)
-    {
-        assign(value);
-    }
+    CStringBuffer() { buffer_[0] = '\0'; }
+    CStringBuffer(const char* value) { assign(value); }
 
     CStringBuffer(arts_vformat_t, ARTS_FORMAT_STRING const char* format, std::va_list va)
     {
@@ -191,55 +295,19 @@ public:
         va_end(va);
     }
 
-    void clear()
-    {
-        buffer_[0] = '\0';
-    }
+    void clear() { buffer_[0] = '\0'; }
+    void assign(const char* value) { arts_strcpy(buffer_, value); }
+    void assign(const char* value, usize len) { arts_strncpy(buffer_, value, len); }
+    void append(const char* value) { arts_strcat(buffer_, value); }
+    void append(const char* value, usize len) { arts_strncat(buffer_, value, len); }
 
-    void assign(const char* value)
-    {
-        arts_strcpy(buffer_, value);
-    }
+    char* get() { return buffer_; }
+    const char* get() const { return buffer_; }
 
-    void assign(const char* value, usize len)
-    {
-        arts_strncpy(buffer_, value, len);
-    }
+    operator char*() { return buffer_; }
+    operator const char*() const { return buffer_; }
 
-    void append(const char* value)
-    {
-        arts_strcat(buffer_, value);
-    }
-
-    void append(const char* value, usize len)
-    {
-        arts_strncat(buffer_, value, len);
-    }
-
-    char* get()
-    {
-        return buffer_;
-    }
-
-    const char* get() const
-    {
-        return buffer_;
-    }
-
-    operator char*()
-    {
-        return buffer_;
-    }
-
-    operator const char*() const
-    {
-        return buffer_;
-    }
-
-    static constexpr usize capacity()
-    {
-        return N;
-    }
+    static constexpr usize capacity() { return N; }
 
 private:
     char buffer_[N];
@@ -258,17 +326,12 @@ public:
         buffer_[(written_ < capacity_) ? written_ : 0] = '\0';
     }
 
-    void operator+=(const char* str)
-    {
-        append(str, std::strlen(str));
-    }
+    void operator+=(const char* str) { append(str, std::strlen(str)); }
 
     void operator+=(char c)
     {
         if (written_ < capacity_)
-        {
             buffer_[written_++] = c;
-        }
     }
 
     void append(const char* str, usize len)
@@ -276,10 +339,8 @@ public:
         if (written_ + len >= capacity_)
         {
             written_ = capacity_;
-
             return;
         }
-
         std::memcpy(buffer_ + written_, str, len);
         written_ += len;
     }
@@ -305,35 +366,12 @@ inline bool IsLetter(i32 value)
     return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
 }
 
-inline bool operator==(const ConstString& lhs, const ConstString& rhs)
-{
-    return std::strcmp(lhs.get(), rhs.get()) == 0;
-}
-
-inline bool operator==(const ConstString& lhs, const char* rhs)
-{
-    return std::strcmp(lhs.get(), rhs) == 0;
-}
-
-inline bool operator==(const char* lhs, const ConstString& rhs)
-{
-    return std::strcmp(lhs, rhs.get()) == 0;
-}
-
-inline bool operator!=(const ConstString& lhs, const ConstString& rhs)
-{
-    return std::strcmp(lhs.get(), rhs.get()) != 0;
-}
-
-inline bool operator!=(const ConstString& lhs, const char* rhs)
-{
-    return std::strcmp(lhs.get(), rhs) != 0;
-}
-
-inline bool operator!=(const char* lhs, const ConstString& rhs)
-{
-    return std::strcmp(lhs, rhs.get()) != 0;
-}
+inline bool operator==(const ConstString& lhs, const ConstString& rhs) { return std::strcmp(lhs.get(), rhs.get()) == 0; }
+inline bool operator==(const ConstString& lhs, const char* rhs) { return std::strcmp(lhs.get(), rhs) == 0; }
+inline bool operator==(const char* lhs, const ConstString& rhs) { return std::strcmp(lhs, rhs.get()) == 0; }
+inline bool operator!=(const ConstString& lhs, const ConstString& rhs) { return std::strcmp(lhs.get(), rhs.get()) != 0; }
+inline bool operator!=(const ConstString& lhs, const char* rhs) { return std::strcmp(lhs.get(), rhs) != 0; }
+inline bool operator!=(const char* lhs, const ConstString& rhs) { return std::strcmp(lhs, rhs.get()) != 0; }
 
 template <usize N, typename... Args>
 ARTS_FORCEINLINE CStringBuffer<N> arts_formatf(const char* format, const Args&... args)

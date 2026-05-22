@@ -20,6 +20,7 @@ define_dummy_symbol(data7_printer);
 
 #include "printer.h"
 
+#include <cstdio>
 #include <cstring>
 #include <ctime>
 
@@ -157,6 +158,9 @@ void DefaultPrinter(i32 level, const char* format, std::va_list args)
 #endif
 
     arts_strcat(buffer, "\r\n");
+
+    // Always output to stderr on Linux for debugging
+    std::fprintf(stderr, "%s", buffer);
 
     if (EnableNormalOutput)
     {

@@ -1146,12 +1146,14 @@ int main(int argc, char** argv)
         },
         nullptr);
 
+#ifdef _WIN32
     SDL_SetWindowsMessageHook(
         [](void* /*userdata*/, MSG* msg) {
             SDLWindowProc(msg->hwnd, msg->message, msg->wParam, msg->lParam);
             return true;
         },
         nullptr);
+#endif
 
     if (int file_argc = 0; char** file_argv = GetCommandFileUTF8(&file_argc))
     {

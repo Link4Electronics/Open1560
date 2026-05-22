@@ -18,6 +18,8 @@
 
 #include "mmtext.h"
 
+#if defined(_WIN32)
+
 #include "agi/bitmap.h"
 #include "agi/pipeline.h"
 #include "agi/surface.h"
@@ -366,3 +368,5 @@ void mmTextNode::RenderText(
         mmText::ReleaseDC();
     }
 }
+
+#endif // _WIN32

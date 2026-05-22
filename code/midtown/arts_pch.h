@@ -25,15 +25,17 @@
 #    define ARTS_STANDALONE
 #endif
 
+#ifdef _WIN32
 // Windows XP
-#define WINVER 0x0501
-#define _WIN32_WINNT 0x0501
+#    define WINVER 0x0501
+#    define _WIN32_WINNT 0x0501
 
-#define DIRECT3D_VERSION 0x0600
-#define DIRECTDRAW_VERSION 0x0600
-#define DIRECTINPUT_VERSION 0x0500
-#define DIRECTSOUND_VERSION 0x0600
-#define INITGUID
+#    define DIRECT3D_VERSION 0x0600
+#    define DIRECTDRAW_VERSION 0x0600
+#    define DIRECTINPUT_VERSION 0x0500
+#    define DIRECTSOUND_VERSION 0x0600
+#    define INITGUID
+#endif
 
 #include <algorithm>
 #include <cmath>

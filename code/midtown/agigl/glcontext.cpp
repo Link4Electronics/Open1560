@@ -54,7 +54,7 @@ void agiGLContext::MakeCurrent()
 
 void* agiGLContext::GetProc(const char* name)
 {
-    return SDL_GL_GetProcAddress(name);
+    return (void*)SDL_GL_GetProcAddress(name);
 }
 
 static void ParseExtensionString(HashTable& table, const char* extensions, isize category)

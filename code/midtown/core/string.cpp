@@ -41,10 +41,18 @@ ConstString arts_getenv(const char* name)
 {
     char* buffer;
 
+#if defined(_WIN32)
     if (_dupenv_s(&buffer, nullptr, name))
         return nullptr;
 
     ConstString result {buffer};
     free(buffer);
     return result;
+#else
+    const char* val = getenv(name);
+    if (!val)
+        return nullptr;
+
+    return ConstString{val};
+#endif
 }

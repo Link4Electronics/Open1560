@@ -434,8 +434,10 @@ agiPipeline::agiPipeline()
     window_ = GetRootWindow();
 
     // Set 24-bit float precision (f32)
+#if defined(_WIN32)
     unsigned int current = 0;
     _controlfp_s(&current, _PC_24, _MCW_PC);
+#endif
 
     PROBER = 0;
 }

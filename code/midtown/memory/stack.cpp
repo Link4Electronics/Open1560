@@ -20,6 +20,8 @@ define_dummy_symbol(memory_stack);
 
 #include "stack.h"
 
+#if defined(_WIN32)
+
 #include "core/minwin.h"
 #include "memory/allocator.h"
 #include "stream/stream.h"
@@ -31,6 +33,18 @@ struct MapSymbol
 {
     char* Name {};
     usize Address {};
+
+    // ?Comp@MapSymbol@@QBEHABU1@@Z
+    i32 Comp(const MapSymbol& other) const
+    {
+        if (Address > other.Address)
+            return 1;
+
+        if (Address < other.Address)
+            return -1;
+
+        return 0;
+    }
 };
 
 static usize MainBaseOfImage = 0;
@@ -41,31 +55,28 @@ static i32 MapSymbolCount = 0;
 
 static const MapSymbol* LookupMapSymbol(usize address)
 {
-    const MapSymbol* first = MapSymbols;
-    const MapSymbol* last = first + MapSymbolCount;
-
-    const MapSymbol* find = std::upper_bound(
-        first, last, address, [](usize address, const MapSymbol& entry) { return address < entry.Address; });
-
-    if (find == first || find == last)
+    for (i32 i = 0; i < MapSymbolCount; ++i)
     {
-        return nullptr;
+        if (MapSymbols[i].Address == address)
+            return &MapSymbols[i];
     }
 
-    return find - 1;
+    return nullptr;
 }
 
 static void InitMap()
 {
+    char map_name[256];
     HANDLE map_file = INVALID_HANDLE_VALUE;
 
     {
-        char map_name[256];
-        GetModuleFileNameA(NULL, map_name, ARTS_SSIZE32(map_name));
+        char file_name[256];
+        GetModuleFileNameA(NULL, file_name, ARTS_SSIZE32(file_name));
 
-        if (char* map_ext = std::strrchr(map_name, '.'))
+        if (char* map_ext = std::strrchr(file_name, '.'))
             *map_ext = '\0';
 
+        arts_strcpy(map_name, file_name);
         arts_strcat(map_name, ".MAP");
 
         map_file =
@@ -481,3 +492,144 @@ void DebugLog(i32 tag, void* data, i32 size)
         DebugLogStream->Write(addrs, sizeof(addrs));
     }
 }
+
+#else // !_WIN32
+
+#include <cstdio>
+#include <execinfo.h>
+#include "stream/stream.h"
+
+void DumpStackTraceback(i32* frames, i32 count)
+{
+    for (i32 i = 0; i < count; ++i)
+    {
+        char symbol[256];
+        LookupAddress(symbol, ARTS_SIZE(symbol), usize(frames[i]));
+        Displayf("%d. %s", count - i - 1, symbol);
+    }
+}
+
+void LookupAddress(char* buffer, usize buflen, usize address)
+{
+    char** symbols = backtrace_symbols((void* const*)&address, 1);
+    if (symbols && symbols[0])
+    {
+        arts_strncpy(buffer, symbols[0], buflen - 1);
+        buffer[buflen - 1] = '\0';
+        free(symbols);
+    }
+    else
+    {
+        arts_snprintf(buffer, buflen, "0x%016zX", address);
+    }
+}
+
+ARTS_NOINLINE i32 StackTraceback(i32 depth, isize* frames, i32 skipped)
+{
+    return backtrace(reinterpret_cast<void**>(frames), depth);
+}
+
+ARTS_NOINLINE void StackTraceback(i32 depth)
+{
+    isize frames[32];
+    i32 num_frames = StackTraceback(std::min(depth, ARTS_SSIZE32(frames)), frames, 1);
+    DumpStackTraceback(reinterpret_cast<i32*>(frames), num_frames);
+}
+
+ARTS_NOINLINE void StackTraceback(i32 depth, i32 skipped)
+{
+    isize frames[32];
+    i32 num_frames = StackTraceback(std::min(depth, ARTS_SSIZE32(frames)), frames, skipped + 1);
+    DumpStackTraceback(reinterpret_cast<i32*>(frames), num_frames);
+}
+
+// ?DebugLogStream@@3PAVStream@@A
+Stream* DebugLogStream = nullptr;
+
+// ?DebugLogReading@@3HA
+b32 DebugLogReading = false;
+
+void DebugLogInit(b32 reading)
+{
+    if (DebugLogStream)
+        return;
+
+    DebugLogReading = reading;
+    DebugLogStream = as_raw arts_fopen("debug.log", reading ? "r" : "w");
+}
+
+void DebugLogShutdown()
+{
+    delete DebugLogStream;
+}
+
+void DebugLog(i32 tag, void* data, i32 size)
+{
+    if (DebugLogStream == nullptr)
+        return;
+
+    isize addrs[8] {};
+    StackTraceback(8, addrs, 1);
+
+    if (DebugLogReading)
+    {
+        i32 ftag = 0;
+        i32 fsize = 0;
+
+        DebugLogStream->Read(&ftag, sizeof(ftag));
+        DebugLogStream->Read(&fsize, sizeof(fsize));
+
+        u8 fbuffer[256];
+        ArAssert(fsize <= ARTS_SSIZE32(fbuffer), "Invalid Input Size");
+        DebugLogStream->Read(fbuffer, fsize);
+
+        isize faddrs[8] {};
+        DebugLogStream->Read(faddrs, sizeof(faddrs));
+
+        bool invalid = false;
+
+        if (tag != ftag)
+        {
+            Errorf("DebugLog: Current tag %x != stored %x", tag, ftag);
+            invalid = true;
+        }
+
+        if (size != fsize)
+        {
+            Errorf("DebugLog: Current size %d != stored %d", size, fsize);
+            invalid = true;
+        }
+
+        if (std::memcmp(data, fbuffer, size))
+        {
+            Errorf("DebugLog: Current data != stored data");
+            Displayf("CURRENT:");
+            HexDump(data, size);
+            Displayf("STORED:");
+            HexDump(fbuffer, fsize);
+            invalid = true;
+        }
+
+        if (std::memcmp(addrs, faddrs, sizeof(faddrs)))
+        {
+            Errorf("DebugLog: Stack backtrace mismatch");
+            Displayf("CURRENT:");
+            DumpStackTraceback(reinterpret_cast<i32*>(addrs), ARTS_SSIZE32(addrs));
+            Displayf("STORED:");
+            DumpStackTraceback(reinterpret_cast<i32*>(faddrs), ARTS_SSIZE32(faddrs));
+            invalid = true;
+        }
+
+        if (invalid)
+            Quitf("DebugLog mismatch, aborting.");
+    }
+    else
+    {
+        DebugLogStream->Write(&tag, sizeof(tag));
+        DebugLogStream->Write(&size, sizeof(size));
+        DebugLogStream->Write(data, size);
+        DebugLogStream->Write(addrs, sizeof(addrs));
+    }
+}
+
+#endif // _WIN32

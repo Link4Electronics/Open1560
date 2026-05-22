@@ -226,7 +226,7 @@ void mmUnhitBangerInstance::Impact(mmInstance* other, Vector3* position)
     }
 }
 
-u32 mmUnhitBangerInstance::SizeOf()
+usize mmUnhitBangerInstance::SizeOf()
 {
     return sizeof(*this);
 }
@@ -270,7 +270,7 @@ Vector3& mmHitBangerInstance::GetPos()
     return Matrix.m3;
 }
 
-u32 mmHitBangerInstance::SizeOf()
+usize mmHitBangerInstance::SizeOf()
 {
     return sizeof(*this);
 }

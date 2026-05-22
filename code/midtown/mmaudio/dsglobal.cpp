@@ -20,6 +20,8 @@ define_dummy_symbol(mmaudio_dsglobal);
 
 #include "dsglobal.h"
 
+#if defined(_WIN32)
+
 #include <dsconf.h>
 
 #include "stream/stream.h"
@@ -139,3 +141,5 @@ u8 DSGlobal::CheckCDFile(aconst char* file_name)
 
     return false;
 }
+
+#endif // _WIN32

@@ -177,7 +177,7 @@ Vector3& mmMatrixInstance::GetPos()
     return Matrix.m3;
 }
 
-u32 mmMatrixInstance::SizeOf()
+usize mmMatrixInstance::SizeOf()
 {
     return sizeof(*this);
 }

@@ -33,3 +33,5 @@ void UITextDropdown::AssignString(string options)
     DropWidget->SetString(std::move(options));
     SetValue(*ValuePtr);
 }
+
+i32 UITextDropdown::SetValue(i32 arg1) { return 0; } // ARTS_IMPORT stub

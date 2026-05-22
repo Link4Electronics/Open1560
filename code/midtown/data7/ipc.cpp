@@ -28,7 +28,7 @@ b32 SynchronousMessageQueues = false;
 
 usize ipcCreateThread(ulong(ARTS_STDCALL* start)(void*), void* param, ulong* thread_id)
 {
-    return reinterpret_cast<usize>(CreateThread(nullptr, 0, start, param, 0, thread_id));
+    return reinterpret_cast<usize>(CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(start), param, 0, reinterpret_cast<LPDWORD>(thread_id)));
 }
 
 void ipcWaitThreadExit(usize thread)
@@ -40,7 +40,10 @@ void ipcWaitThreadExit(usize thread)
 void ipcDeleteThread(usize thread)
 {
     if (thread)
-        CloseHandle(reinterpret_cast<HANDLE>(thread));
+    {
+        HANDLE h = reinterpret_cast<HANDLE>(thread);
+        CloseHandle(h);
+    }
 }
 
 void ipcYield()

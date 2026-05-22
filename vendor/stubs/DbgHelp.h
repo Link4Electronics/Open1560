@@ -1,0 +1,62 @@
+#pragma once
+
+// Debug Help Library stubs for Linux
+// All types are defined in core/minwin_linux.h already
+
+struct _EXCEPTION_POINTERS;
+struct _CONTEXT;
+
+using PSYMBOL_INFO = void*;
+using IMAGEHLP_MODULE = void*;
+using STACKFRAME = void*;
+using DWORD64 = unsigned long long;
+
+inline BOOL SymInitialize(HANDLE, LPCSTR, BOOL) { return FALSE; }
+inline BOOL SymSetOptions(DWORD) { return FALSE; }
+inline BOOL SymFromAddr(HANDLE, DWORD64, DWORD64*, PSYMBOL_INFO) { return FALSE; }
+inline BOOL SymGetModuleInfo(HANDLE, DWORD64, IMAGEHLP_MODULE*) { return FALSE; }
+inline BOOL StackWalk(DWORD, HANDLE, HANDLE, STACKFRAME, PVOID, LPVOID, void*, void*, void*) { return FALSE; }
+inline DWORD UnDecorateSymbolName(LPCSTR, LPSTR, DWORD, DWORD) { return 0; }
+inline DWORD SymGetOptions() { return 0; }
+inline void RtlCaptureContext(_CONTEXT*) {}
+
+#define SYMOPT_UNDNAME 0x00000002
+#define SYMOPT_DEFERRED_LOADS 0x00000008
+#define UNDNAME_NAME_ONLY 0x00001000
+#define MAX_SYM_NAME 2000
+#define IMAGE_FILE_MACHINE_I386 0x014c
+
+// EXCEPTION constants
+#define EXCEPTION_ACCESS_VIOLATION         0xC0000005
+#define EXCEPTION_ARRAY_BOUNDS_EXCEEDED   0xC000008C
+#define EXCEPTION_BREAKPOINT              0x80000003
+#define EXCEPTION_DATATYPE_MISALIGNMENT   0x80000002
+#define EXCEPTION_FLT_DENORMAL_OPERAND    0xC000008D
+#define EXCEPTION_FLT_DIVIDE_BY_ZERO      0xC000008E
+#define EXCEPTION_FLT_INEXACT_RESULT      0xC000008F
+#define EXCEPTION_FLT_INVALID_OPERATION   0xC0000090
+#define EXCEPTION_FLT_OVERFLOW            0xC0000091
+#define EXCEPTION_FLT_STACK_CHECK         0xC0000092
+#define EXCEPTION_FLT_UNDERFLOW           0xC0000093
+#define EXCEPTION_ILLEGAL_INSTRUCTION     0xC000001D
+#define EXCEPTION_INT_DIVIDE_BY_ZERO      0xC0000094
+#define EXCEPTION_INT_OVERFLOW            0xC0000095
+#define EXCEPTION_INVALID_HANDLE          0xC0000008
+#define EXCEPTION_NONCONTINUABLE          0xC0000025
+#define EXCEPTION_PRIV_INSTRUCTION        0xC0000096
+#define EXCEPTION_STACK_OVERFLOW          0xC00000FD
+
+#define EXCEPTION_EXECUTE_HANDLER 1
+
+#define AddrModeFlat 0
+
+#define FILE_FLAG_RANDOM_ACCESS 0x10000000
+
+#define GMEM_ZEROINIT 0x0040
+#define GMEM_MOVEABLE 0x0002
+
+// MapVirtualKey
+#define MAPVK_VK_TO_VSC 0
+#define MAPVK_VSC_TO_VK 1
+
+inline UINT MapVirtualKeyA(UINT, UINT) { return 0; }

@@ -59,11 +59,17 @@
 #    define ARTS_LINE ARTS_CONCAT(__LINE__, L) // Workaround Edit and Continue
 #endif
 
-#define ARTS_CDECL __cdecl
-#define ARTS_STDCALL __stdcall
-#define ARTS_FASTCALL __fastcall
+#if defined(_MSC_VER) || defined(__MINGW32__)
+#    define ARTS_CDECL __cdecl
+#    define ARTS_STDCALL __stdcall
+#    define ARTS_FASTCALL __fastcall
+#else
+#    define ARTS_CDECL
+#    define ARTS_STDCALL
+#    define ARTS_FASTCALL
+#endif
 
-#if _MSC_VER > 1400
+#if defined(_MSC_VER) && _MSC_VER > 1400
 #    include <sal.h>
 #    define ARTS_FORMAT_STRING _In_z_ _Printf_format_string_
 #else

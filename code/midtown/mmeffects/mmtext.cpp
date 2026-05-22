@@ -27,6 +27,8 @@ define_dummy_symbol(mmeffects_mmtext);
 mmTextNode::mmTextNode() = default;
 mmTextNode::~mmTextNode() = default;
 
+void mmTextNode::SetFGColor(Vector4&) {} // ARTS_IMPORT stub
+
 void mmTextNode::Init(f32 x, f32 y, f32 width, f32 height, i32 num_lines, i32 flags)
 {
     // NOTE: Originally clamped width/height

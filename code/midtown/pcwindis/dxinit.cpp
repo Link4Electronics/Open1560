@@ -82,9 +82,10 @@ void dxiDirectInputCreate()
         }
     }
 
-#if DIRECTINPUT_VERSION != 0x0500
-#    error Unsupported
-#endif
+#ifdef _WIN32
+#    if DIRECTINPUT_VERSION != 0x0500
+#        error Unsupported
+#    endif
 
     HMODULE hdinput = LoadLibraryA("dinput.dll");
 
@@ -96,6 +97,10 @@ void dxiDirectInputCreate()
 
     if (err != 0)
         Quitf("DirectInputCreate failed, code %x", err);
+#else
+    if (!lpDI)
+        Displayf("No joystick support available (no SDL gamepad detected)");
+#endif
 }
 
 static mem::cmd_param PARAM_integrated {"integrated"};
@@ -197,9 +202,13 @@ void dxiWindowCreate(const char* title, dxiRendererType type)
         Quitf("Failed to create main window: %s", SDL_GetError());
     }
 
+#ifdef _WIN32
     hwndMain =
         (HWND) SDL_GetPointerProperty(SDL_GetWindowProperties(g_MainWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
     ArAssert(hwndMain != NULL, "Failed to get native window handle");
+#else
+    hwndMain = NULL;
+#endif
 
     SDL_RaiseWindow(g_MainWindow);
 }

@@ -20,6 +20,7 @@ define_dummy_symbol(mmnetwork_network);
 
 #include "network.h"
 
+#if defined(_WIN32)
 static GUID MM_GUID {0x6C9983A7, 0xC037, 0x11D2, {0xA8, 0xDA, 0x00, 0xA0, 0xC9, 0x70, 0xAF, 0x5D}};
 
 static mem::cmd_param PARAM_dplay {"dplay"};
@@ -317,3 +318,5 @@ hook_func(INIT_main, [] {
     // Load the DLL early to improve the chance it can use that adddress.
     LoadDirectPlay();
 });
+
+#endif // _WIN32

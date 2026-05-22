@@ -1,31 +1,27 @@
-/*
-    Open1560 - An Open Source Re-Implementation of Midtown Madness 1 Beta
-    Copyright (C) 2020 Brick
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
-
 #pragma once
 
 #include "minwin.h"
 
 #include <cstdlib>
 
-#define ArDebugBreak() __debugbreak()
-
-#if 1
-#    define ArAbort() __fastfail(FAST_FAIL_FATAL_APP_EXIT)
+#if defined(_MSC_VER)
+#    define ArDebugBreak() __debugbreak()
 #else
-#    define ArAbort() ((IsDebuggerPresent() && (ArDebugBreak(), 0)), std::abort())
+#    define ArDebugBreak() ::raise(SIGTRAP)
+#endif
+
+#if defined(_MSC_VER)
+#    if 1
+#        define ArAbort() __fastfail(FAST_FAIL_FATAL_APP_EXIT)
+#    else
+#        define ArAbort() ((IsDebuggerPresent() && (ArDebugBreak(), 0)), std::abort())
+#    endif
+#elif defined(__has_builtin)
+#    if __has_builtin(__builtin_trap)
+#        define ArAbort() __builtin_trap()
+#    else
+#        define ArAbort() (ArDebugBreak(), std::abort())
+#    endif
+#else
+#    define ArAbort() (ArDebugBreak(), std::abort())
 #endif

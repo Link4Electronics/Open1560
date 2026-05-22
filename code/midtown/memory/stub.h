@@ -23,7 +23,7 @@
 #ifdef _MSC_VER
 #    define ArReturnAddress() _ReturnAddress()
 #else
-#    define ArReturnAddress() __builtin_return_address()
+#    define ArReturnAddress() __builtin_return_address(0)
 #endif
 
 void* arts_calloc(std::size_t num, std::size_t size);

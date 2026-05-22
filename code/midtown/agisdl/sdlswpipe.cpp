@@ -313,9 +313,11 @@ i32 agiSDLSWPipeline::BeginGfx()
     }
 
     // FIXME: SDL_CreateRenderer can silently recreate the underlying window
+#ifdef _WIN32
     hwndMain =
         (HWND) SDL_GetPointerProperty(SDL_GetWindowProperties(g_MainWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
     ArAssert(hwndMain != NULL, "Failed to get native window handle");
+#endif
 
     Displayf("Software Renderer: %s", SDL_GetRendererName(sdl_renderer_));
 

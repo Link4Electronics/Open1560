@@ -121,13 +121,18 @@ inline Callback::Callback(Func func) noexcept
     new (data_) Func(func);
 }
 
-#ifdef _M_IX86
+#if defined(_M_IX86)
 template <>
 inline Callback::Callback(void (*func)()) noexcept
     : invoke_(reinterpret_cast<void(__fastcall*)(void*, void*)>(
           func)) // cdecl to fastcall - func can safely ignore the two arguments passed in ecx and edx
 {}
-#else
+#elif defined(__x86_64__)
+template <>
+inline Callback::Callback(void (*func)()) noexcept
+    : invoke_(reinterpret_cast<void (*)(void*, void*)>(func))
+{}
+#elif defined(__aarch64__) || defined(__arm__)
 #    error This optimisation might not be valid
 #endif
 

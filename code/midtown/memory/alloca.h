@@ -18,6 +18,10 @@
 
 #pragma once
 
-#include <malloc.h>
-
-#define ARTS_ALLOCA(TYPE, COUNT) static_cast<TYPE*>(_alloca(sizeof(TYPE) * (COUNT)))
+#if defined(_MSC_VER)
+#    include <malloc.h>
+#    define ARTS_ALLOCA(TYPE, COUNT) static_cast<TYPE*>(_alloca(sizeof(TYPE) * (COUNT)))
+#else
+#    include <alloca.h>
+#    define ARTS_ALLOCA(TYPE, COUNT) static_cast<TYPE*>(alloca(sizeof(TYPE) * (COUNT)))
+#endif

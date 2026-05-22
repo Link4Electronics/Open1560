@@ -34,6 +34,10 @@ define_dummy_symbol(mmwidget_manager);
 #include "pointer.h"
 #include "widget.h"
 
+#include "vector7/vector4.h"
+
+Vector4& MenuManager::GetFGColor(i32) { static Vector4 white{1,1,1,1}; return white; } // ARTS_IMPORT stub
+
 void MenuManager::AddPointer()
 {}
 

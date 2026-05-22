@@ -23,3 +23,5 @@ define_dummy_symbol(mmwidget_pointer);
 #include "agi/bitmap.h"
 
 sfPointer::~sfPointer() = default;
+
+void sfPointer::ResChange(i32, i32) {} // ARTS_IMPORT stub

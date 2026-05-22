@@ -36,6 +36,12 @@ static asMemoryAllocator* Allocator()
     return result;
 }
 
+// On Linux, Mesa/Gallium OpenGL driver is loaded lazily via dlopen during SDL init,
+// which triggers allocations before the custom allocator is ready. Use the system
+// allocator for operator new/delete to avoid this. Game code uses arts_* functions
+// which still go through the custom allocator.
+#ifndef __linux__
+
 ARTS_NOINLINE void* operator new(std::size_t size)
 {
     return Allocator()->Allocate(size, DefaultNewAlignment, ArReturnAddress());
@@ -65,6 +71,8 @@ ARTS_NOINLINE void operator delete[](void* ptr, std::size_t sz) noexcept
 {
     Allocator()->Free(ptr, sz);
 }
+
+#endif
 
 ARTS_NOINLINE void* arts_calloc(std::size_t num, std::size_t size)
 {

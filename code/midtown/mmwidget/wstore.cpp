@@ -27,6 +27,8 @@ define_dummy_symbol(mmwidget_wstore);
 void WArray::Flush()
 {}
 
+void WArray::AddWidgetData(i32, i32, Vector4&, char*) {} // ARTS_IMPORT stub
+
 void WArray::Read(char* name)
 {
     Ptr<Stream> input = as_ptr OpenFile(name, "tune", ".csv", 0, nullptr, 0, "widget file");

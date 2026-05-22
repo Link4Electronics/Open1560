@@ -50,6 +50,7 @@ static ARTS_NOINLINE utimer_t init_utimer()
     if (utimer_mode == 2)
         return 0;
 
+#if defined(_WIN32)
     __try
     {
         Timer t;
@@ -63,6 +64,15 @@ static ARTS_NOINLINE utimer_t init_utimer()
         utimer_mode = 2;
         return 0;
     }
+#else
+    {
+        Timer t;
+        utimer_t start = ARTS_RDTSC();
+
+        Timer::Sleep(100);
+        adjust_utimer(t.Time(), start);
+    }
+#endif
 
     utimer_mode = 0;
     return ARTS_RDTSC();

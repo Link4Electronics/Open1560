@@ -54,6 +54,7 @@ static void SaveScreenShotWorker(agiSurfaceDesc* surface)
     i32 pitch = surface->Pitch;
     u8* pixels = static_cast<u8*>(surface->Surface);
 
+#if defined(_WIN32)
     if (OpenClipboard(NULL))
     {
         if (EmptyClipboard())
@@ -93,6 +94,7 @@ static void SaveScreenShotWorker(agiSurfaceDesc* surface)
 
         CloseClipboard();
     }
+#endif
 
     char name_buffer[64];
     const char* file_name = ScreenShotName.get();

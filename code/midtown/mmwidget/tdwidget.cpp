@@ -19,3 +19,6 @@
 define_dummy_symbol(mmwidget_tdwidget);
 
 #include "tdwidget.h"
+#include "data7/str.h"
+
+void TextDropWidget::SetString(string) {} // ARTS_IMPORT stub

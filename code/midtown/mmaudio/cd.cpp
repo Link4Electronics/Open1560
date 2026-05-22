@@ -20,6 +20,8 @@ define_dummy_symbol(mmaudio_cd);
 
 #include "cd.h"
 
+#if defined(_WIN32)
+
 #include "pcwindis/pcwindis.h"
 
 CDMan::CDMan(HWND window)
@@ -230,3 +232,5 @@ LRESULT CDMan::WindowProc([[maybe_unused]] HWND hwnd, UINT uMsg, WPARAM wParam, 
 
     return 0;
 }
+
+#endif // _WIN32

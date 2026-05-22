@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <cfloat>
+
 #include "arts7/linear.h"
 
 class JointedStruct;

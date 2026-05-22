@@ -849,9 +849,11 @@ static void TranslateScancode(SDL_Scancode scan, i32& vkey, u8& vsc)
         default: return;
     }
 
+#if defined(_WIN32)
     if (vkey && vsc == 0)
         vsc = MapVirtualKeyA(vkey, MAPVK_VK_TO_VSC) & 0xFF;
 
     if (vsc && vkey == 0)
         vkey = MapVirtualKeyA(vsc, MAPVK_VSC_TO_VK);
+#endif
 }

@@ -41,15 +41,31 @@ void StackTraceback(i32 depth);
 
 void StackTraceback(i32 depth, i32 skipped);
 
+#if defined(_WIN32)
 i32 ExceptionFilter(_EXCEPTION_POINTERS* exception);
+#endif
 
 #ifndef ARTS_NO_EXCEPTION_CATCHING
-#    define ARTS_EXCEPTION_BEGIN \
-        __try                    \
-        {
-#    define ARTS_EXCEPTION_END \
-        }                      \
-        __except (ExceptionFilter(GetExceptionInformation()))
+#    if defined(_WIN32)
+#        define ARTS_EXCEPTION_BEGIN \
+            __try                    \
+            {
+#        define ARTS_EXCEPTION_END \
+            }                      \
+            __except (ExceptionFilter(GetExceptionInformation()))
+#    elif defined(__cpp_exceptions) || defined(__EXCEPTIONS)
+#        define ARTS_EXCEPTION_BEGIN \
+            try                      \
+            {
+#        define ARTS_EXCEPTION_END \
+            }                      \
+            catch (...)            \
+            {                      \
+            }
+#    else
+#        define ARTS_EXCEPTION_BEGIN
+#        define ARTS_EXCEPTION_END
+#    endif
 #else
 #    define ARTS_EXCEPTION_BEGIN \
         if constexpr (true)      \

@@ -19,8 +19,11 @@
 #pragma once
 
 #include "data7/callback.h"
+#include "core/minwin.h"
 
-#include <dplobby.h>
+#if defined(_WIN32)
+#    include <dplobby.h>
+#endif
 
 struct NETSESSION_DESC
 {
@@ -132,7 +135,7 @@ public:
     ARTS_IMPORT i32 GetPlayerName(ulong arg1, char* arg2);
 
     // ?GetPlayers@asNetwork@@QAEHPAU_GUID@@@Z
-    ARTS_IMPORT i32 GetPlayers(_GUID* arg1);
+    ARTS_IMPORT i32 GetPlayers(GUID* arg1);
 
     // ?GetProtocols@asNetwork@@QAEXXZ
     ARTS_IMPORT void GetProtocols();
@@ -150,7 +153,9 @@ public:
     ARTS_IMPORT void HandleAppMessage(void* arg1);
 
     // ?HandleSysMessage@asNetwork@@QAEXPAUDPMSG_GENERIC@@@Z
+#if defined(_WIN32)
     ARTS_IMPORT void HandleSysMessage(DPMSG_GENERIC* arg1);
+#endif
 
     // ?Initialize@asNetwork@@QAEHHHH@Z
     ARTS_EXPORT b32 Initialize(i32 max_players, b32 secure, i32 game_version);
@@ -165,7 +170,7 @@ public:
     ARTS_IMPORT i32 JoinSession(i32 arg1, char* arg2);
 
     // ?JoinSession@asNetwork@@QAEHPADPAU_GUID@@0@Z
-    ARTS_IMPORT i32 JoinSession(char* arg1, _GUID* arg2, char* arg3);
+    ARTS_IMPORT i32 JoinSession(char* arg1, GUID* arg2, char* arg3);
 
     // ?Logout@asNetwork@@QAEXXZ
     ARTS_EXPORT void Logout();
@@ -243,6 +248,7 @@ private:
     i32 state_;
     Callback sys_message_cb_;
     Callback app_message_cb_;
+#if defined(_WIN32)
     IDirectPlay4A* dplay_;
     IDirectPlayLobby3A* dp_lobby_;
     DPID player_id_;
@@ -250,6 +256,7 @@ private:
     GUID* app_guid_;
     DPMSG_GENERIC* recv_buffer_;
     i32 recv_buffer_size_;
+#endif
 
     // 1549: 4
     // 1560: 5
@@ -266,20 +273,24 @@ private:
     bool is_host_;
 };
 
+#if defined(_WIN32)
 check_size(asNetwork, 0x64);
+#endif
 
+#if defined(_WIN32)
 // ?EnumConnectionsCallback@@YGHPBU_GUID@@PAXKPBUDPNAME@@K1@Z
 ARTS_IMPORT i32 ARTS_STDCALL EnumConnectionsCallback(
-    const _GUID* arg1, void* arg2, ulong arg3, const DPNAME* arg4, ulong arg5, void* arg6);
+    const GUID* arg1, void* arg2, ulong arg3, const DPNAME* arg4, ulong arg5, void* arg6);
 
 // ?EnumModemAddress@@YGHABU_GUID@@KPBXPAX@Z
-ARTS_IMPORT i32 ARTS_STDCALL EnumModemAddress(const _GUID& arg1, ulong arg2, const void* arg3, void* arg4);
+ARTS_IMPORT i32 ARTS_STDCALL EnumModemAddress(const GUID& arg1, ulong arg2, const void* arg3, void* arg4);
 
 // ?EnumPlayersCallback@@YGHKKPBUDPNAME@@KPAX@Z
 ARTS_IMPORT i32 ARTS_STDCALL EnumPlayersCallback(ulong arg1, ulong arg2, const DPNAME* arg3, ulong arg4, void* arg5);
 
 // ?EnumSessionCallback@@YGHPBUDPSESSIONDESC2@@PAKKPAX@Z
 ARTS_IMPORT i32 ARTS_STDCALL EnumSessionCallback(const DPSESSIONDESC2* arg1, ulong* arg2, ulong arg3, void* arg4);
+#endif
 
 // ?NETMGR@@3VasNetwork@@A
 ARTS_IMPORT extern asNetwork NETMGR;

@@ -25,6 +25,81 @@
 #include <atomic>
 #include <vector>
 
+// DIJOFS_* offset constants (from dinput.h)
+#define DIJOFS_X            offsetof(DIJOYSTATE, lX)
+#define DIJOFS_Y            offsetof(DIJOYSTATE, lY)
+#define DIJOFS_Z            offsetof(DIJOYSTATE, lZ)
+#define DIJOFS_RX           offsetof(DIJOYSTATE, lRx)
+#define DIJOFS_RY           offsetof(DIJOYSTATE, lRy)
+#define DIJOFS_RZ           offsetof(DIJOYSTATE, lRz)
+#define DIJOFS_SLIDER(n)   (offsetof(DIJOYSTATE, rglSlider) + (n) * sizeof(LONG))
+#define DIJOFS_POV(n)      (offsetof(DIJOYSTATE, rgdwPOV) + (n) * sizeof(DWORD))
+#define DIJOFS_BUTTON(n)   (offsetof(DIJOYSTATE, rgbButtons) + (n))
+
+#ifndef DIDFT_OPTIONAL
+#    define DIDFT_OPTIONAL 0x80000000
+#endif
+#ifndef DIDFT_AXIS
+#    define DIDFT_AXIS 0x00000003
+#endif
+
+// Standard c_dfDIJoystick object format array
+static const DIOBJECTDATAFORMAT s_JoystickObjectData[] = {
+    { nullptr, DIJOFS_X,       DIDFT_OPTIONAL | DIDFT_AXIS,   0 },
+    { nullptr, DIJOFS_Y,       DIDFT_OPTIONAL | DIDFT_AXIS,   0 },
+    { nullptr, DIJOFS_Z,       DIDFT_OPTIONAL | DIDFT_AXIS,   0 },
+    { nullptr, DIJOFS_RX,      DIDFT_OPTIONAL | DIDFT_AXIS,   0 },
+    { nullptr, DIJOFS_RY,      DIDFT_OPTIONAL | DIDFT_AXIS,   0 },
+    { nullptr, DIJOFS_RZ,      DIDFT_OPTIONAL | DIDFT_AXIS,   0 },
+    { nullptr, DIJOFS_SLIDER(0), DIDFT_OPTIONAL | DIDFT_AXIS, 0 },
+    { nullptr, DIJOFS_SLIDER(1), DIDFT_OPTIONAL | DIDFT_AXIS, 0 },
+    { nullptr, DIJOFS_POV(0),  DIDFT_OPTIONAL | DIDFT_POV,    0 },
+    { nullptr, DIJOFS_POV(1),  DIDFT_OPTIONAL | DIDFT_POV,    0 },
+    { nullptr, DIJOFS_POV(2),  DIDFT_OPTIONAL | DIDFT_POV,    0 },
+    { nullptr, DIJOFS_POV(3),  DIDFT_OPTIONAL | DIDFT_POV,    0 },
+    { nullptr, DIJOFS_BUTTON(0),  DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(1),  DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(2),  DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(3),  DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(4),  DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(5),  DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(6),  DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(7),  DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(8),  DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(9),  DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(10), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(11), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(12), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(13), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(14), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(15), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(16), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(17), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(18), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(19), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(20), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(21), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(22), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(23), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(24), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(25), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(26), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(27), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(28), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(29), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(30), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+    { nullptr, DIJOFS_BUTTON(31), DIDFT_OPTIONAL | DIDFT_PSHBUTTON, 0 },
+};
+
+const DIDATAFORMAT c_dfDIJoystick = {
+    sizeof(DIDATAFORMAT),
+    sizeof(DIOBJECTDATAFORMAT),
+    0,
+    sizeof(DIJOYSTATE),
+    sizeof(s_JoystickObjectData) / sizeof(s_JoystickObjectData[0]),
+    const_cast<DIOBJECTDATAFORMAT*>(s_JoystickObjectData),
+};
+
 static HRESULT DoFunctionNotImplemented(const char* name, usize times)
 {
     if (times < 5)
@@ -103,10 +178,8 @@ public:
         Owner->RegisterEffect(this);
     }
 
-    virtual ~ioRumbleEffect() = 0
-    {
-        Owner->UnregisterEffect(this);
-    }
+    virtual ~ioRumbleEffect() {}
+    void Unregister() { Owner->UnregisterEffect(this); }
 
     virtual void SetParameters(const DIEFFECT& params, DWORD dwFlags)
     {

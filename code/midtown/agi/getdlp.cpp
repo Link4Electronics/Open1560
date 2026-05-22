@@ -20,6 +20,8 @@ define_dummy_symbol(agi_getdlp);
 
 #include "getdlp.h"
 
+#include <sys/stat.h>
+
 #include "stream/hfsystem.h"
 
 // ?LibOutOfDate@@YAHPAD0@Z

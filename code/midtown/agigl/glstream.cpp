@@ -266,6 +266,7 @@ agiGLMapUnsafeStreamBuffer::agiGLMapUnsafeStreamBuffer(usize capacity)
     Mapping = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
     glUnmapBuffer(GL_ARRAY_BUFFER);
 
+#if defined(_WIN32)
     if (MEMORY_BASIC_INFORMATION info; VirtualQuery(Mapping, &info, sizeof(info)))
     {
         // info.State == MEM_COMMIT; // 0x1000
@@ -279,4 +280,5 @@ agiGLMapUnsafeStreamBuffer::agiGLMapUnsafeStreamBuffer(usize capacity)
             Warningf("Unexpected mapping state, this may crash");
         }
     }
+#endif
 }
