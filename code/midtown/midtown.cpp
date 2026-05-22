@@ -52,6 +52,8 @@ define_dummy_symbol(midtown);
 #include "mminput/input.h"
 #include "mmphysics/phys.h"
 #include "mmui/graphics.h"
+#include "mmui/main.h"
+#include "mmwidget/manager.h"
 #include "pcwindis/dxinit.h"
 #include "pcwindis/dxsetup.h"
 #include "pcwindis/pcwindis.h"
@@ -302,7 +304,7 @@ static mem::cmd_param PARAM_allocstats {"allocstats", "Show allocator stats afte
 
 static void InitAudioManager()
 {
-    /*AUDMGRPTR = */ new AudManager();
+    AUDMGRPTR = new AudManager();
 
     AudMgr()->SteroOn = (MMSTATE.AudFlags & AudManager::GetStereoOnMask()) != 0;
 
@@ -508,7 +510,9 @@ static void MainPhase(i32 argc, char** argv)
     Ptr<mmInterface> mm_interface;
 
     {
-        mmLoader loader;
+        mmLoader loader {};
+        // Zero-initialize after weak stub (bar_active_ etc. are garbage without this)
+        std::memset(&loader, 0, sizeof(loader));
 
         if (page_override == -1)
         {
@@ -554,6 +558,23 @@ static void MainPhase(i32 argc, char** argv)
                 }
 
                 mm_interface = arnew mmInterface();
+
+                // Fix uninitialized vtable and members from weak stub
+                extern void* _ZTV11mmInterface[];
+                std::memset(mm_interface.get(), 0, sizeof(mmInterface));
+                *reinterpret_cast<void**>(mm_interface.get()) = &_ZTV11mmInterface[2];
+
+                // Create menu system
+                MenuManager::Instance = new MenuManager();
+                extern void* _ZTV11MenuManager[];
+                std::memset(MenuManager::Instance, 0, sizeof(MenuManager));
+                *reinterpret_cast<void**>(MenuManager::Instance) = &_ZTV11MenuManager[2];
+
+                mm_interface->MenuMain = new MainMenu(IDM_MAIN);
+                MenuManager::Instance->AddMenu2(mm_interface->MenuMain);
+                MenuManager::Instance->Switch(IDM_MAIN);
+                Sim()->AdoptChild(Ptr<asNode>(MenuManager::Instance));
+
                 Sim()->AddChild(mm_interface.get());
 
                 mm_interface->SetNavigationOrders();

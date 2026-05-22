@@ -64,6 +64,7 @@ i32 InitPipeline(const char* title, i32 argc, char** argv)
         Quitf("Tried to InitPipeline twice.");
 
     auto pipe = CreatePipeline(argc, argv);
+
     agiPipeline::CurrentPipe = pipe.release();
 
     if (!agiPipeline::CurrentPipe)

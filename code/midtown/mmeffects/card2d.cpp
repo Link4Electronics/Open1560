@@ -21,4 +21,6 @@ define_dummy_symbol(mmeffects_card2d);
 #include "card2d.h"
 #include "vector7/vector4.h"
 
+Card2D::~Card2D() = default;
+
 void Card2D::SetColor(Vector4) {} // ARTS_IMPORT stub

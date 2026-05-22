@@ -27,7 +27,7 @@ public:
     ARTS_IMPORT agiColorModelRGB555();
 
     // ??1agiColorModelRGB555@@UAE@XZ | inline
-    ARTS_EXPORT ~agiColorModelRGB555() override = default;
+    ARTS_EXPORT ~agiColorModelRGB555() override;
 
     // ?Filter@agiColorModelRGB555@@UAEIIIII@Z
     ARTS_IMPORT u32 Filter(u32 arg1, u32 arg2, u32 arg3, u32 arg4) override;
@@ -54,7 +54,7 @@ public:
     ARTS_IMPORT agiColorModelRGB565();
 
     // ??1agiColorModelRGB565@@UAE@XZ | inline
-    ARTS_EXPORT ~agiColorModelRGB565() override = default;
+    ARTS_EXPORT ~agiColorModelRGB565() override;
 
     // ?Filter@agiColorModelRGB565@@UAEIIIII@Z
     ARTS_IMPORT u32 Filter(u32 arg1, u32 arg2, u32 arg3, u32 arg4) override;
@@ -81,7 +81,7 @@ public:
     ARTS_IMPORT agiColorModelRGB555_Rev();
 
     // ??1agiColorModelRGB555_Rev@@UAE@XZ | inline
-    ARTS_EXPORT ~agiColorModelRGB555_Rev() override = default;
+    ARTS_EXPORT ~agiColorModelRGB555_Rev() override;
 
     // ?Filter@agiColorModelRGB555_Rev@@UAEIIIII@Z
     ARTS_IMPORT u32 Filter(u32 arg1, u32 arg2, u32 arg3, u32 arg4) override;
@@ -108,7 +108,7 @@ public:
     ARTS_IMPORT agiColorModelRGB565_Rev();
 
     // ??1agiColorModelRGB565_Rev@@UAE@XZ | inline
-    ARTS_EXPORT ~agiColorModelRGB565_Rev() override = default;
+    ARTS_EXPORT ~agiColorModelRGB565_Rev() override;
 
     // ?Filter@agiColorModelRGB565_Rev@@UAEIIIII@Z
     ARTS_IMPORT u32 Filter(u32 arg1, u32 arg2, u32 arg3, u32 arg4) override;
@@ -135,7 +135,7 @@ public:
     ARTS_IMPORT agiColorModelRGB888();
 
     // ??1agiColorModelRGB888@@UAE@XZ | inline
-    ARTS_EXPORT ~agiColorModelRGB888() override = default;
+    ARTS_EXPORT ~agiColorModelRGB888() override;
 
     // ?Filter@agiColorModelRGB888@@UAEIIIII@Z
     ARTS_IMPORT u32 Filter(u32 arg1, u32 arg2, u32 arg3, u32 arg4) override;
@@ -162,7 +162,7 @@ public:
     ARTS_IMPORT agiColorModelRGB888_Rev();
 
     // ??1agiColorModelRGB888_Rev@@UAE@XZ | inline
-    ARTS_EXPORT ~agiColorModelRGB888_Rev() override = default;
+    ARTS_EXPORT ~agiColorModelRGB888_Rev() override;
 
     // ?Filter@agiColorModelRGB888_Rev@@UAEIIIII@Z
     ARTS_IMPORT u32 Filter(u32 arg1, u32 arg2, u32 arg3, u32 arg4) override;
@@ -189,7 +189,7 @@ public:
     ARTS_IMPORT agiColorModelRGBA5551();
 
     // ??1agiColorModelRGBA5551@@UAE@XZ | inline
-    ARTS_EXPORT ~agiColorModelRGBA5551() override = default;
+    ARTS_EXPORT ~agiColorModelRGBA5551() override;
 
     // ?Filter@agiColorModelRGBA5551@@UAEIIIII@Z
     ARTS_IMPORT u32 Filter(u32 arg1, u32 arg2, u32 arg3, u32 arg4) override;
@@ -216,7 +216,7 @@ public:
     ARTS_IMPORT agiColorModelRGBA4444();
 
     // ??1agiColorModelRGBA4444@@UAE@XZ | inline
-    ARTS_EXPORT ~agiColorModelRGBA4444() override = default;
+    ARTS_EXPORT ~agiColorModelRGBA4444() override;
 
     // ?Filter@agiColorModelRGBA4444@@UAEIIIII@Z
     ARTS_IMPORT u32 Filter(u32 arg1, u32 arg2, u32 arg3, u32 arg4) override;
@@ -243,7 +243,7 @@ public:
     ARTS_IMPORT agiColorModelARGB();
 
     // ??1agiColorModelARGB@@UAE@XZ | inline
-    ARTS_EXPORT ~agiColorModelARGB() override = default;
+    ARTS_EXPORT ~agiColorModelARGB() override;
 
     // ?Filter@agiColorModelARGB@@UAEIIIII@Z
     ARTS_IMPORT u32 Filter(u32 arg1, u32 arg2, u32 arg3, u32 arg4) override;
@@ -270,7 +270,7 @@ public:
     ARTS_IMPORT agiColorModelABGR();
 
     // ??1agiColorModelABGR@@UAE@XZ | inline
-    ARTS_EXPORT ~agiColorModelABGR() override = default;
+    ARTS_EXPORT ~agiColorModelABGR() override;
 
     // ?Filter@agiColorModelABGR@@UAEIIIII@Z
     ARTS_IMPORT u32 Filter(u32 arg1, u32 arg2, u32 arg3, u32 arg4) override;

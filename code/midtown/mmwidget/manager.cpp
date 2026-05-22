@@ -26,17 +26,61 @@ define_dummy_symbol(mmwidget_manager);
 #include "arts7/linear.h"
 #include "arts7/view.h"
 #include "eventq7/eventq.h"
-#include "mmaudio/sound.h"
 #include "mmeffects/card2d.h"
+#include "mmeffects/mmtext.h"
+#include "mmaudio/sound.h"
 
 #include "menu.h"
+#include "mstore.h"
 #include "navbar.h"
 #include "pointer.h"
 #include "widget.h"
+#include "wstore.h"
 
 #include "vector7/vector4.h"
 
 Vector4& MenuManager::GetFGColor(i32) { static Vector4 white{1,1,1,1}; return white; } // ARTS_IMPORT stub
+
+MenuManager::~MenuManager()
+{
+}
+
+void MenuManager::ResChange(i32 /*width*/, i32 /*height*/)
+{
+}
+
+i32 MenuManager::AddMenu2(UIMenu* menu)
+{
+    if (!menus_)
+    {
+        if (max_menus_ <= 0)
+            max_menus_ = 16;
+        menus_ = arnewa UIMenu*[max_menus_] {};
+    }
+    else if (num_menus_ >= max_menus_)
+    {
+        i32 new_max = max_menus_ * 2;
+        Ptr<UIMenu*[]> new_menus = arnewa UIMenu*[new_max] {};
+        for (i32 i = 0; i < num_menus_; ++i)
+            new_menus[i] = menus_[i];
+        menus_ = std::move(new_menus);
+        max_menus_ = new_max;
+    }
+
+    i32 index = num_menus_++;
+    menus_[index] = menu;
+    return index;
+}
+
+i32 MenuManager::FindMenu(i32 idm)
+{
+    for (i32 i = 0; i < num_menus_; ++i)
+    {
+        if (menus_[i] && menus_[i]->GetMenuID() == idm)
+            return i;
+    }
+    return -1;
+}
 
 void MenuManager::AddPointer()
 {}
@@ -138,6 +182,12 @@ void MenuManager::Update()
     last_drawn_ = nullptr;
 
     asNode::Update();
+
+    for (i32 i = 0; i < num_menus_; ++i)
+    {
+        if (menus_[i] && menus_[i]->IsNodeActive())
+            menus_[i]->Update();
+    }
 
     if (last_drawn_)
         last_drawn_->Update();

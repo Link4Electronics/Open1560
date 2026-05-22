@@ -187,6 +187,7 @@ void dxiWindowCreate(const char* title, dxiRendererType type)
 
     if (type == dxiRendererType::OpenGL)
     {
+        Warningf("dxiWindowCreate: Setting OpenGL attributes for OpenGL type");
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
@@ -194,12 +195,25 @@ void dxiWindowCreate(const char* title, dxiRendererType type)
 
         window_flags |= SDL_WINDOW_OPENGL /*| SDL_WINDOW_FULLSCREEN_DESKTOP*/;
     }
+    else
+    {
+        Warningf("dxiWindowCreate: NOT OpenGL type, type=%d", (int)type);
+    }
 
-    g_MainWindow = SDL_CreateWindow(title, 0, 0, window_flags);
+    Warningf("dxiWindowCreate: Creating window with flags 0x%x (OPENGL=%s)", window_flags,
+        (window_flags & SDL_WINDOW_OPENGL) ? "yes" : "no");
+
+    g_MainWindow = SDL_CreateWindow(title, 640, 480, window_flags);
 
     if (!g_MainWindow)
     {
         Quitf("Failed to create main window: %s", SDL_GetError());
+    }
+
+    {
+        SDL_WindowFlags actual_flags = SDL_GetWindowFlags(g_MainWindow);
+        Warningf("dxiWindowCreate: Actual window flags: 0x%x (OPENGL=%s)", actual_flags,
+            (actual_flags & SDL_WINDOW_OPENGL) ? "yes" : "no");
     }
 
 #ifdef _WIN32

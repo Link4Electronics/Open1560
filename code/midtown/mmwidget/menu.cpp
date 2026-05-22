@@ -30,14 +30,48 @@ define_dummy_symbol(mmwidget_menu);
 #include "textfield.h"
 #include "widget.h"
 
+#include "bm_button.h"
+
 #include <algorithm>
 
 #include <SDL3/SDL_keyboard.h>
 
+UIMenu::UIMenu(i32 menu_id)
+{
+    action_source_ = 0;
+    state_ = 0;
+    enabled_ = 0;
+    menu_id_ = menu_id;
+    field_30 = 0;
+    widget_count_ = 0;
+    field_38 = 0;
+    field_44 = nullptr;
+    field_48 = 0;
+    menu_x_ = 0.114f;
+    menu_y_ = 0.07f;
+    menu_width_ = 0.775f;
+    menu_height_ = 0.855f;
+    field_5C = 0.0f;
+    field_60 = 0.0f;
+    field_64 = 0.0f;
+    field_68 = 0;
+    p_b_state_ = &b_state_;
+    b_state_ = 0;
+    field_74 = 0;
+    widget_id_ = 0;
+    prev_menu_id_ = -1;
+    focus_widget_index_ = 0;
+    field_84 = 0.0f;
+    field_88 = 0;
+}
+
 void UIMenu::PreSetup()
 {
     if (!MenuMgr()->Is3D())
-        MenuMgr()->GetCamera()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f, 1);
+    {
+        if (asCamera* camera = MenuMgr()->GetCamera())
+            camera->SetViewport(0.0f, 0.0f, 1.0f, 1.0f, 1);
+    }
 }
 
 void UIMenu::PostSetup()
@@ -381,4 +415,30 @@ i32 UIMenu::FindThePrevFocusWidget()
 i32 UIMenu::FindTheLastFocusWidget()
 {
     return FindFocusWidget(widget_count_ - 1, -1);
+}
+
+void UIMenu::Update()
+{
+    asNode::Update();
+
+    for (i32 i = 0; i < widget_count_; ++i)
+        widgets_[i]->Update();
+}
+
+void UIMenu::SetBstate(i32 index)
+{
+    if (index >= 0 && index < widget_count_)
+    {
+        *p_b_state_ = index;
+        GetWidget(index)->Switch(true);
+    }
+}
+
+UIBMButton* UIMenu::AddBMButton(i32 idc, aconst char* name, f32 x, f32 y, i32 type, Callback cb_1, i32* arg7,
+    i32 arg8, i32 arg9, Callback arg10)
+{
+    Ptr<UIBMButton> button = arnew UIBMButton();
+    button->Init(const_cast<char*>(name), x, y, type, 0, arg7, arg8, arg9, nullptr, cb_1, arg10);
+    AddWidget(button.get(), name, x, y, 0.0f, 0.0f, idc, nullptr);
+    return button.release();
 }

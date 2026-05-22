@@ -27,7 +27,7 @@ public:
     ARTS_IMPORT agiBILight(agiPipeline* arg1);
 
     // ??1agiBILight@@UAE@XZ
-    ARTS_IMPORT ~agiBILight() override;
+    ARTS_EXPORT ~agiBILight() override;
 
     // ?BeginGfx@agiBILight@@UAEHXZ
     ARTS_IMPORT i32 BeginGfx() override;

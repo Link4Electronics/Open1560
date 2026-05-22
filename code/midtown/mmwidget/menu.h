@@ -99,7 +99,7 @@ public:
     ARTS_IMPORT UIMenu(i32 menu_id);
 
     // ??1UIMenu@@UAE@XZ
-    ARTS_IMPORT ~UIMenu() override;
+    ~UIMenu() override = default;
 
     // ?PreSetup@UIMenu@@UAEXXZ
     ARTS_EXPORT virtual void PreSetup();

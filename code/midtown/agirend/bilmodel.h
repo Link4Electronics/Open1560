@@ -27,7 +27,7 @@ public:
     ARTS_IMPORT agiBILightModel(agiPipeline* arg1);
 
     // ??1agiBILightModel@@UAE@XZ
-    ARTS_IMPORT ~agiBILightModel() override;
+    ARTS_EXPORT ~agiBILightModel() override;
 
     // ?Activate@agiBILightModel@@UAEHXZ
     ARTS_IMPORT i32 Activate() override;

@@ -55,3 +55,40 @@ void uiWidget::SetEnabled(bool enabled)
     else
         Disable();
 }
+
+uiWidget::uiWidget()
+{
+    Enabled = 1;
+    ReadOnly = 0;
+    Active = false;
+}
+
+void uiWidget::TurnOn()
+{
+    Active = true;
+}
+
+void uiWidget::TurnOff()
+{
+    Active = false;
+}
+
+void uiWidget::SetReadOnly(i32 arg1)
+{
+    ReadOnly = arg1;
+}
+
+void uiWidget::Disable()
+{
+    Enabled = 0;
+}
+
+void uiWidget::Enable()
+{
+    Enabled = 1;
+}
+
+f32 uiWidget::GetScreenHeight()
+{
+    return 0.0f;
+}

@@ -70,6 +70,11 @@ i32 agiGLPipeline::BeginGfx()
 #endif
     );
 
+    SDL_WindowFlags win_flags = SDL_GetWindowFlags(window_);
+    Warningf("Window flags: 0x%x (OPENGL=%s, HIDDEN=%s)", win_flags,
+        (win_flags & SDL_WINDOW_OPENGL) ? "yes" : "no",
+        (win_flags & SDL_WINDOW_HIDDEN) ? "yes" : "no");
+
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);

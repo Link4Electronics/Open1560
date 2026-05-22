@@ -24,6 +24,8 @@ define_dummy_symbol(mmeffects_mmtext);
 #include "agi/pipeline.h"
 #include "localize/localize.h"
 
+#include <cstring>
+
 mmTextNode::mmTextNode() = default;
 mmTextNode::~mmTextNode() = default;
 
@@ -32,6 +34,13 @@ void mmTextNode::SetFGColor(Vector4&) {} // ARTS_IMPORT stub
 void mmTextNode::Init(f32 x, f32 y, f32 width, f32 height, i32 num_lines, i32 flags)
 {
     // NOTE: Originally clamped width/height
+
+    // Zero out smart pointers before assignment to handle uninitialized state
+    // (weak stub constructors skip member construction, leaving garbage pointers
+    //  that would be delete[]'d/Released by the assignment operators)
+    void* null = nullptr;
+    std::memcpy(&lines_, &null, sizeof(lines_));
+    std::memcpy(&text_bitmap_, &null, sizeof(text_bitmap_));
 
     x_ = x;
     y_ = y;

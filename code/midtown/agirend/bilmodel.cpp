@@ -19,3 +19,23 @@
 define_dummy_symbol(agirend_bilmodel);
 
 #include "bilmodel.h"
+
+agiBILightModel::agiBILightModel(agiPipeline* pipe)
+    : agiLightModel(pipe)
+{}
+
+agiBILightModel::~agiBILightModel() = default;
+
+i32 agiBILightModel::Activate()
+{
+    return 0;
+}
+
+i32 agiBILightModel::BeginGfx()
+{
+    return 0;
+}
+
+void agiBILightModel::EndGfx()
+{
+}

@@ -28,8 +28,8 @@ public:
     // ??0Card2D@@QAE@XZ
     ARTS_IMPORT Card2D();
 
-    // ??1Card2D@@UAE@XZ | inline
-    ARTS_EXPORT ~Card2D() override = default;
+    // ??1Card2D@@UAE@XZ
+    ARTS_EXPORT ~Card2D() override;
 
     // ?Init@Card2D@@QAEXPAVasCamera@@MMMMM@Z
     ARTS_IMPORT void Init(asCamera* camera, f32 x, f32 y, f32 w, f32 h, f32 alpha);

@@ -19,3 +19,5 @@
 define_dummy_symbol(mmcityinfo_playerdir);
 
 #include "playerdir.h"
+
+

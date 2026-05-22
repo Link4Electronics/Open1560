@@ -447,7 +447,7 @@ __attribute__((weak)) void MenuManager::CheckBG(UIMenu* arg1) {}
 __attribute__((weak)) void MenuManager::DisablePU() {}
 __attribute__((weak)) i32 MenuManager::FindMenu(i32 idm) { return {}; }
 __attribute__((weak)) void* MenuManager::GetFont(i32 arg1) { return {}; }
-__attribute__((weak)) agiTexSorter* MenuManager::Instance {};
+__attribute__((weak)) MenuManager* MenuManager::Instance {};
 __attribute__((weak)) MenuManager::~MenuManager() {}
 __attribute__((weak)) void MenuManager::PlayMenuSwitchSound() {}
 __attribute__((weak)) b32 MenuManager::ScanGlobalKeys(i32 arg1) { return {}; }
@@ -1044,6 +1044,7 @@ __attribute__((weak)) char* mmPlayerData::GetFileName() { return {}; }
 __attribute__((weak)) i32 mmPlayerData::GetTotalPassed() { return {}; }
 __attribute__((weak)) i32 mmPlayerData::GetTotalScore() { return {}; }
 // --- mmPlayerDirectory ---
+__attribute__((weak)) mmPlayerDirectory::mmPlayerDirectory() {}
 __attribute__((weak)) mmPlayerDirectory::~mmPlayerDirectory() {}
 // --- mmPolygon ---
 __attribute__((weak)) void mmPolygon::PlotTriangle(i32 arg1, i32 arg2, i32 arg3, mmBoundTemplate* arg4, i32 arg5) {}

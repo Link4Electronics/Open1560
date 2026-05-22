@@ -169,9 +169,15 @@ void mmInterface::SetStateDefaults()
 
 void mmInterface::SetNavigationOrders()
 {
+    // FIXME: Requires MenuManager::Instance to be set up with all menus constructed.
+    // Weak stubs skip initialization, so all pointers are null/garbage.
+    if (!MenuMgr())
+        return;
+
     // TODO: Do this during menu construction instead
     const auto fixup = [this](UIMenu* menu, std::initializer_list<const char*> labels) {
-        menu->SetNavigationOrder(labels.begin(), labels.size());
+        if (menu)
+            menu->SetNavigationOrder(labels.begin(), labels.size());
     };
 
     fixup((UIMenu*) MenuMgr()->GetNavBar(), {"mnav_prev", "mnav_opt", "mnav_help", "mnav_stow", "mnav_exit"});
@@ -189,4 +195,9 @@ void mmInterface::SetNavigationOrders()
 
     fixup((UIMenu*) DlgHallOfFame,
         {"compscroll", "drec_bltz", "drec_circ", "drec_chck", "hoff_amap", "hoff_prop", "hoff_pros", "dlg_done"});
+}
+
+void mmInterface::Update()
+{
+    asNode::Update();
 }
