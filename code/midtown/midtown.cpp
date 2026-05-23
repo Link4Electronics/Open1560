@@ -20,6 +20,13 @@ define_dummy_symbol(midtown);
 
 #include "midtown.h"
 
+#include <fcntl.h>
+#include <unistd.h>
+
+static int dbg_fd = -1;
+static void dbg_open() { if (dbg_fd < 0) dbg_fd = open("/tmp/opencode/midtown_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644); }
+#define DBG_MSG(msg) do { dbg_open(); write(dbg_fd, msg, sizeof(msg) - 1); } while(0)
+
 #include "agi/bitmap.h"
 #include "agi/physlib.h"
 #include "agi/pipeline.h"
@@ -349,10 +356,13 @@ static b32 GenerateLoadScreenName()
 static void GameLoop([[maybe_unused]] mmInterface* mm_interface, [[maybe_unused]] mmGameManager* game_manager,
     [[maybe_unused]] char* replay_name)
 {
+    DBG_MSG("DBG midtown: GameLoop entered\n");
     ARTS_EXCEPTION_BEGIN
     {
+        DBG_MSG("DBG midtown: GameLoop exception handler set\n");
         while (MMSTATE.GameState == mmGameState::Running)
         {
+            DBG_MSG("DBG midtown: GameLoop iteration\n");
 #ifdef ARTS_DEV_BUILD
             if (CycleTest && Sim()->GetElapsed() > CycleTime)
             {
@@ -558,29 +568,27 @@ static void MainPhase(i32 argc, char** argv)
                 }
 
                 mm_interface = arnew mmInterface();
-
-                // Fix uninitialized vtable and members from weak stub
-                extern void* _ZTV11mmInterface[];
-                std::memset(mm_interface.get(), 0, sizeof(mmInterface));
-                *reinterpret_cast<void**>(mm_interface.get()) = &_ZTV11mmInterface[2];
+                DBG_MSG("DBG midtown: after mmInterface ctor\n");
 
                 // Create menu system
                 MenuManager::Instance = new MenuManager();
-                extern void* _ZTV11MenuManager[];
-                std::memset(MenuManager::Instance, 0, sizeof(MenuManager));
-                *reinterpret_cast<void**>(MenuManager::Instance) = &_ZTV11MenuManager[2];
+                DBG_MSG("DBG midtown: after MenuManager ctor\n");
 
                 mm_interface->MenuMain = new MainMenu(IDM_MAIN);
+                DBG_MSG("DBG midtown: after MainMenu ctor\n");
                 MenuManager::Instance->AddMenu2(mm_interface->MenuMain);
-                MenuManager::Instance->Switch(IDM_MAIN);
+                DBG_MSG("DBG midtown: after AddMenu2\n");
                 Sim()->AdoptChild(Ptr<asNode>(MenuManager::Instance));
+                DBG_MSG("DBG midtown: after AdoptChild MenuManager\n");
 
                 Sim()->AddChild(mm_interface.get());
+                DBG_MSG("DBG midtown: after AddChild mmInterface\n");
 
                 mm_interface->SetNavigationOrders();
                 mm_interface->Reset();
-                mm_interface->ShowMain(CycleState);
 
+                // Don't ShowMain yet — wait until after loader.EndTask()
+                // so buttons don't appear during loading screen.
                 CycleState = 1;
                 break;
             }
@@ -633,25 +641,42 @@ static void MainPhase(i32 argc, char** argv)
             default: Quitf("Invalid GameState %i", MMSTATE.GameState);
         }
 
+        DBG_MSG("DBG midtown: before ResChange\n");
         Sim()->ResChange(Pipe()->GetWidth(), Pipe()->GetHeight());
+        DBG_MSG("DBG midtown: after ResChange\n");
 
         loader.EndTask();
+        DBG_MSG("DBG midtown: after loader.EndTask\n");
+
+        // Show main menu now that loading is complete
+        if (mm_interface)
+        {
+            DBG_MSG("DBG midtown: before ShowMain\n");
+            mm_interface->ShowMain(1);
+            DBG_MSG("DBG midtown: after ShowMain\n");
+        }
     }
 
+    DBG_MSG("DBG midtown: before Setting GameState\n");
     MMSTATE.GameState = mmGameState::Running;
     MMSTATE.Shutdown = false;
+    DBG_MSG("DBG midtown: after Setting GameState\n");
 
     ALLOCATOR.SanityCheck();
+    DBG_MSG("DBG midtown: after SanityCheck\n");
 
     module_init.End();
     Displayf("********* Load time = %f seconds; %dK allocated.", LoadTimer.Time(), ALLOCATOR.GetHeapUsed() >> 10);
+    DBG_MSG("DBG midtown: after Displayf\n");
 
     if (PARAM_allocstats)
     {
         ALLOCATOR.DumpStats();
     }
 
+    DBG_MSG("DBG midtown: before GameLoop\n");
     GameLoop(mm_interface.get(), game_manager.get(), replay_name);
+    DBG_MSG("DBG midtown: after GameLoop\n");
 
 #ifdef ARTS_DEV_BUILD
     if (game_manager)

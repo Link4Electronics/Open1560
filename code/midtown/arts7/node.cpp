@@ -20,6 +20,13 @@ define_dummy_symbol(arts7_node);
 
 #include "node.h"
 
+#include <fcntl.h>
+#include <unistd.h>
+
+static int dbg_node_fd = -1;
+#define DBG_NODE_INIT() do { if (dbg_node_fd < 0) dbg_node_fd = open("/tmp/opencode/node_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644); } while(0)
+#define DBG_NODE(msg) do { DBG_NODE_INIT(); write(dbg_node_fd, msg, sizeof(msg) - 1); } while(0)
+
 #include "data7/callback.h"
 #include "data7/metadefine.h"
 #include "data7/str.h"
@@ -66,7 +73,10 @@ void asNode::Update()
         for (asNode* n = child_node_; n; n = n->next_node_)
         {
             if (n->IsNodeActive())
+            {
+                DBG_NODE("DBG asNode::Update child\n");
                 n->Update();
+            }
         }
     }
 
@@ -164,6 +174,17 @@ b32 asNode::AddChild(asNode* child)
 
     child->parent_node_ = this;
     child->next_node_ = nullptr;
+
+    const char* pname = GetNodeName();
+    if (!pname) pname = "(null)";
+    const char* cname = child->GetNodeName();
+    if (!cname) cname = "(null)";
+    write(2, "DBG AddChild: parent=", 21);
+    write(2, pname, __builtin_strlen(pname));
+    write(2, " child=", 7);
+    write(2, cname, __builtin_strlen(cname));
+    write(2, "\n", 1);
+    DBG_NODE("DBG AddChild\n");
 
     asNode** last = &child_node_;
 

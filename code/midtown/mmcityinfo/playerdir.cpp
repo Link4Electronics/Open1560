@@ -20,4 +20,13 @@ define_dummy_symbol(mmcityinfo_playerdir);
 
 #include "playerdir.h"
 
+mmPlayerDirectory::mmPlayerDirectory() = default;
+
+mmPlayerDirectory::~mmPlayerDirectory() = default;
+
+MetaClass* mmPlayerDirectory::GetClass()
+{
+    return mmInfoBase::GetClass();
+}
+
 

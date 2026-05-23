@@ -339,12 +339,18 @@ public:
         return widget_count_ ? widgets_[*p_b_state_] : nullptr;
     }
 
+    const char* GetBackgroundName() const
+    {
+        return background_name_.get();
+    }
+
 protected:
     enum
     {
         MENU_STATE_1 = 1,
         MENU_STATE_2 = 2,
         MENU_STATE_3 = 3,
+        MENU_STATE_ACTION = 4,
     };
 
     i32 action_source_;

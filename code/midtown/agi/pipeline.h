@@ -95,6 +95,10 @@ public:
     // ?CopyBitmap@agiPipeline@@UAEXHHPAVagiBitmap@@HHHH@Z
     virtual void CopyBitmap(i32 dst_x, i32 dst_y, agiBitmap* src, i32 src_x, i32 src_y, i32 width, i32 height);
 
+    // StretchCopyBitmap: Separate source and destination dimensions
+    virtual void StretchCopyBitmap(i32 dst_x, i32 dst_y, i32 dst_w, i32 dst_h, agiBitmap* src, i32 src_x, i32 src_y,
+        i32 src_w, i32 src_h);
+
     virtual void ClearAll(i32 color) = 0;
 
     // ?ClearRect@agiPipeline@@UAEXHHHHI@Z

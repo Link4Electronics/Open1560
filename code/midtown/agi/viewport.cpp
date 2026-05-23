@@ -23,6 +23,20 @@ define_dummy_symbol(agi_viewport);
 #include "pipeline.h"
 #include "vector7/matrix34.h"
 
+agiViewParameters::agiViewParameters()
+{
+    X = 0.0f;
+    Y = 0.0f;
+    Width = 1.0f;
+    Height = 1.0f;
+    Fov = 1.0f;
+    Aspect = 1.0f;
+    Near = 0.1f;
+    Far = 1000.0f;
+    DepthScale = 1.0f;
+    Orthographic = false;
+}
+
 void agiViewParameters::SetWorld(const Matrix34& world)
 {
     World = world;

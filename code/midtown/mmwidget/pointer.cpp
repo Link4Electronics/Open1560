@@ -21,7 +21,71 @@ define_dummy_symbol(mmwidget_pointer);
 #include "pointer.h"
 
 #include "agi/bitmap.h"
+#include "agi/pipeline.h"
+#include "arts7/cullmgr.h"
+#include "eventq7/event.h"
+#include "pcwindis/dxinit.h"
+
+sfPointer::sfPointer()
+{
+    ActivateNode();
+}
 
 sfPointer::~sfPointer() = default;
+
+void sfPointer::Init()
+{
+    CursorTexture = as_rc Pipe()->GetBitmap("midcursor", 0.05f, 0.0666667f, 1);
+    if (!CursorTexture)
+        Warningf("sfPointer: could not load midcursor");
+    MaxX = Pipe()->GetWidth();
+    MaxY = Pipe()->GetHeight();
+    State = 0;
+    CurrentPos = {0.0f, 0.0f};
+    PrevPos = {0.0f, 0.0f};
+    CurrentWidget = nullptr;
+}
+
+void sfPointer::Update()
+{
+    if (!IsNodeActive())
+        return;
+
+    PrevPos = CurrentPos;
+
+    if (eqEventHandler::SuperQ)
+    {
+        CurrentPos.x = static_cast<f32>(eqEventHandler::SuperQ->GetMouseX());
+        // On Wayland/EGL the framebuffer is Y-down, so flip to match screen coords
+        CurrentPos.y = Pipe()->GetHeight() - static_cast<f32>(eqEventHandler::SuperQ->GetMouseY());
+    }
+
+    if (CursorTexture)
+        CullMgr()->DeclareBitmap(this, CursorTexture.get());
+    CullMgr()->DeclareCullable2D(this);
+    asNode::Update();
+}
+
+void sfPointer::Cull()
+{
+    if (!IsNodeActive())
+        return;
+
+    if (State == 2)
+        return;
+
+    if (CursorTexture)
+    {
+        i32 cx = static_cast<i32>(CurrentPos.x);
+        i32 cy = static_cast<i32>(CurrentPos.y);
+        Pipe()->CopyClippedBitmap(cx, cy, CursorTexture.get(), 0, 0,
+            CursorTexture->GetWidth(), CursorTexture->GetHeight());
+    }
+}
+
+f32 sfPointer::GetPointerHeight()
+{
+    return 0.0f;
+}
 
 void sfPointer::ResChange(i32, i32) {} // ARTS_IMPORT stub

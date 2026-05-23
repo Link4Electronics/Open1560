@@ -20,7 +20,11 @@ define_dummy_symbol(mmgame_interface);
 
 #include "interface.h"
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "agi/rsys.h"
+#include "mmui/main.h"
 #include "agisw/swrend.h"
 #include "agiworld/quality.h"
 #include "agiworld/texsheet.h"
@@ -43,6 +47,15 @@ ARTS_IMPORT /*static*/ bool IsModemDialin();
 
 // ?ZoneWatcher@@YGKPAX@Z
 ARTS_IMPORT /*static*/ ulong ARTS_STDCALL ZoneWatcher(void* arg1);
+
+mmInterface::mmInterface()
+{
+    void* saved_vtable = *reinterpret_cast<void**>(this);
+    std::memset(this, 0, sizeof(*this));
+    *reinterpret_cast<void**>(this) = saved_vtable;
+
+    ActivateNode();
+}
 
 mmInterface::~mmInterface()
 {
@@ -197,7 +210,61 @@ void mmInterface::SetNavigationOrders()
         {"compscroll", "drec_bltz", "drec_circ", "drec_chck", "hoff_amap", "hoff_prop", "hoff_pros", "dlg_done"});
 }
 
+void mmInterface::Reset()
+{
+    SetStateDefaults();
+}
+
+void mmInterface::ShowMain(i32 /*arg1*/)
+{
+    MenuMgr()->SetDefaultBackgroundImage("main_back");
+    MenuMgr()->Switch(IDM_MAIN);
+    MenuMgr()->SetFocus(MenuMain);
+    MenuMgr()->AddPointer();
+}
+
 void mmInterface::Update()
 {
+    static int dbg_fd = -1;
+    if (dbg_fd < 0) dbg_fd = open("/tmp/opencode/interface_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+    write(dbg_fd, "DBG mmInterface::Update\n", 24);
+
+    if (MenuMgr())
+    {
+        MenuMgr()->CheckInput();
+
+        // Process pending menu actions (state_ == 4 means a widget was activated)
+        if (UIMenu* menu = MenuMgr()->GetCurrentMenu())
+        {
+            if (menu->GetState() == 4)
+            {
+                i32 widget_id = menu->GetWidgetID();
+                menu->ClearAction();
+
+                Displayf("Menu action: menu=%d widget=%d", menu->GetMenuID(), widget_id);
+
+                // Main menu button dispatch
+                if (menu->GetMenuID() == IDM_MAIN)
+                {
+                    switch (widget_id)
+                    {
+                        case IDC_MAIN_MENU_QUICK:
+                            MenuMgr()->Switch(IDM_VEHICLE);
+                            break;
+                        case IDC_MAIN_MENU_SINGLE:
+                            MenuMgr()->Switch(IDM_DRIVER);
+                            break;
+                        case IDC_MAIN_MENU_MULTI:
+                            MenuMgr()->Switch(IDM_NET_SELECT);
+                            break;
+                        case IDC_MAIN_MENU_RECORDS:
+                            // TODO: Show records dialog
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
     asNode::Update();
 }

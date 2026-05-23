@@ -24,34 +24,22 @@ define_dummy_symbol(arts7_camera);
 #include "agi/lmodel.h"
 #include "agi/pipeline.h"
 #include "agi/rsys.h"
+#include "agi/surface.h"
 #include "agi/viewport.h"
+#include "data7/printer.h"
 #include "sim.h"
 
-static mem::cmd_param PARAM_fovfix {"fovfix"};
+#include <cmath>
+
+#include <unistd.h>
 
 void asCamera::SetView(f32 horz_fov, f32 aspect, f32 near_clip, f32 far_clip)
 {
-    // Aspect is supposed to represent the intended aspect ratio for the provided horizontal FOV
-    // However, if it is ever set to 0, it will always be ignored from then on (this is the case in-game)
-    // This means the value is basically useless, so instead assume it was intended for a 4:3 display
-    // This preserves intended vertical FOV on wider screens, including in the dash view
-    //
-    // TODO: Store the vertical fov instead, and handle this in asCamera::Update
-    // https://forum.unity.com/threads/adjust-fov-based-on-aspect-ratio-how.474627/#post-3097919
-    if (PARAM_fovfix.get_or(true))
+    f32 vert_tan = std::tan(horz_fov / 2.0f);
+
+    if (aspect != 0.0f)
     {
-        // Calculate the horizontal tangent
-        f32 horz_tan = std::tan(horz_fov * 0.5f);
-
-        aspect = 640.0f / 480.0f;
-
-        // Calculate the vertical tangent, based on the intended (4:3) aspect ratio
-        f32 vert_tan = horz_tan / aspect;
-
-        // Now calculate the actual aspect ratio
-        aspect = static_cast<f32>(Pipe()->GetWidth()) / static_cast<f32>(Pipe()->GetHeight());
-
-        // Calculate the horizontal FOV, based on the actual aspect ratio
+        vert_tan /= aspect;
         horz_fov = 2.0f * std::atan(vert_tan * aspect);
 
         // Use auto aspect
@@ -76,6 +64,8 @@ void asCamera::SetView(f32 horz_fov, f32 aspect, f32 near_clip, f32 far_clip)
 
 void asCamera::DrawBegin()
 {
+    write(2, "DBG Camera::DrawBegin\n", 22);
+
     i32 draw_mode = Sim()->GetDrawMode();
 
     if (draw_mode == agiDrawTextured)
@@ -101,18 +91,32 @@ void asCamera::DrawBegin()
 
     if (underlay_bitmap_)
     {
+        write(2, "DBG Camera: has underlay\n", 25);
+
         if (underlay_callback_)
         {
+            write(2, "DBG Camera: has callback\n", 25);
             underlay_callback_->Call();
         }
         else
         {
+            write(2, "DBG Camera: about to CopyBitmap\n", 32);
             Pipe()->CopyBitmap(
                 UI_XPos, UI_YPos, underlay_bitmap_, 0, 0, underlay_bitmap_->GetWidth(), underlay_bitmap_->GetHeight());
+            write(2, "DBG Camera: after CopyBitmap\n", 29);
         }
 
+        write(2, "DBG Camera: before Is3D check\n", 30);
         if (!underlay_bitmap_->Is3D())
+        {
+            write(2, "DBG Camera: calling BeginScene\n", 31);
             Pipe()->BeginScene();
+        }
+        write(2, "DBG Camera: underlay done\n", 26);
+    }
+    else
+    {
+        write(2, "DBG Camera: no underlay\n", 24);
     }
 
     i32 clear_flags = clear_flags_;
@@ -132,3 +136,53 @@ void asCamera::DrawBegin()
     if (light_model_)
         light_model_->Activate();
 }
+
+asCamera::asCamera()
+{
+    Rc<agiViewport> vp = as_rc Pipe()->CreateViewport();
+    viewport_ = vp.release();
+    clear_flags_ = AGI_VIEW_CLEAR_TARGET | AGI_VIEW_CLEAR_ZBUFFER;
+    draw_mode_ = agiDrawTextured;
+
+    SetView(1.0f, 1.0f, 0.1f, 1000.0f);
+    SetViewport(0.0f, 0.0f, 1.0f, 1.0f, 0);
+}
+
+void asCamera::SetUnderlay(aconst char* path)
+{
+    if (path && *path)
+    {
+        Rc<agiBitmap> bm = as_rc Pipe()->GetBitmap(path, 1.0f, 1.0f, 0);
+        if (bm)
+            underlay_bitmap_ = bm.release();
+    }
+    else
+    {
+        underlay_bitmap_ = nullptr;
+    }
+}
+
+void asCamera::SetViewport(f32 x, f32 y, f32 w, f32 h, i32 /*arg5*/)
+{
+    viewport_->GetParams().X = x;
+    viewport_->GetParams().Y = y;
+    viewport_->GetParams().Width = w;
+    viewport_->GetParams().Height = h;
+}
+
+asCamera::~asCamera() = default;
+
+void asCamera::Update()
+{
+    asNode::Update();
+}
+
+MetaClass* asCamera::GetClass()
+{
+    return asNode::GetClass();
+}
+
+#ifdef ARTS_DEV_BUILD
+void asCamera::AddWidgets(Bank* /*arg1*/)
+{}
+#endif

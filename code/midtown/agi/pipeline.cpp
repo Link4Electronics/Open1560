@@ -84,6 +84,10 @@ void agiPipeline::CopyBitmap(
     i32 /*dst_x*/, i32 /*dst_y*/, agiBitmap* /*src*/, i32 /*src_x*/, i32 /*src_y*/, i32 /*width*/, i32 /*height*/)
 {}
 
+void agiPipeline::StretchCopyBitmap(i32 /*dst_x*/, i32 /*dst_y*/, i32 /*dst_w*/, i32 /*dst_h*/, agiBitmap* /*src*/,
+    i32 /*src_x*/, i32 /*src_y*/, i32 /*src_w*/, i32 /*src_h*/)
+{}
+
 void agiPipeline::ClearRect(i32 /*x*/, i32 /*y*/, i32 /*width*/, i32 /*height*/, u32 /*color*/)
 {}
 

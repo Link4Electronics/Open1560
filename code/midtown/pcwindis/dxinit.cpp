@@ -183,7 +183,7 @@ void dxiWindowCreate(const char* title, dxiRendererType type)
 
     s_WindowType = type;
 
-    u32 window_flags = SDL_WINDOW_BORDERLESS;
+    SDL_WindowFlags window_flags = 0;
 
     if (type == dxiRendererType::OpenGL)
     {
@@ -193,7 +193,11 @@ void dxiWindowCreate(const char* title, dxiRendererType type)
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
             PARAM_legacygl.get_or(false) ? SDL_GL_CONTEXT_PROFILE_COMPATIBILITY : SDL_GL_CONTEXT_PROFILE_CORE);
 
-        window_flags |= SDL_WINDOW_OPENGL /*| SDL_WINDOW_FULLSCREEN_DESKTOP*/;
+        window_flags |= SDL_WINDOW_OPENGL;
+        if (dxiIsFullScreen())
+            window_flags |= SDL_WINDOW_FULLSCREEN;
+        else
+            window_flags |= SDL_WINDOW_BORDERLESS;
     }
     else
     {
@@ -224,6 +228,7 @@ void dxiWindowCreate(const char* title, dxiRendererType type)
     hwndMain = NULL;
 #endif
 
+    SDL_ShowWindow(g_MainWindow);
     SDL_RaiseWindow(g_MainWindow);
 }
 

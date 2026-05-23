@@ -23,6 +23,9 @@ define_dummy_symbol(arts7_sim);
 #include "agi/error.h"
 #include "agi/getdlp.h"
 #include "agi/light.h"
+
+#include <fcntl.h>
+#include <unistd.h>
 #include "agi/mtllib.h"
 #include "agi/physlib.h"
 #include "agi/pipeline.h"
@@ -465,8 +468,20 @@ void asSimulation::ResetClock()
     max_fps_delta_ = (max_fps > 0.0f) ? (1.0f / max_fps) : 0.0f;
 }
 
+static int simulate_count = 0;
+static int dbg_sim_fd = -1;
+static void dbg_sim_init() { if (dbg_sim_fd < 0) dbg_sim_fd = open("/tmp/opencode/sim_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644); }
+#define DBG_SIM(msg) do { dbg_sim_init(); write(dbg_sim_fd, msg, sizeof(msg) - 1); } while(0)
+
 void asSimulation::Simulate()
 {
+    if (simulate_count == 0)
+    {
+        write(2, "DBG Simulate\n", 13);
+        DBG_SIM("DBG Simulate (file)\n");
+    }
+    ++simulate_count;
+
     if (eqReplay::Playback)
         eqReplay::DoPlayback();
 

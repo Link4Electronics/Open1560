@@ -22,6 +22,7 @@ define_dummy_symbol(mmwidget_manager);
 
 #include "agi/pipeline.h"
 #include "arts7/camera.h"
+#include "arts7/cullmgr.h"
 #include "arts7/lamp.h"
 #include "arts7/linear.h"
 #include "arts7/view.h"
@@ -29,6 +30,9 @@ define_dummy_symbol(mmwidget_manager);
 #include "mmeffects/card2d.h"
 #include "mmeffects/mmtext.h"
 #include "mmaudio/sound.h"
+
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "menu.h"
 #include "mstore.h"
@@ -43,6 +47,80 @@ Vector4& MenuManager::GetFGColor(i32) { static Vector4 white{1,1,1,1}; return wh
 
 MenuManager::~MenuManager()
 {
+}
+
+MenuManager::MenuManager()
+{
+    void* saved_vtable = *reinterpret_cast<void**>(this);
+    std::memset(this, 0, sizeof(*this));
+    *reinterpret_cast<void**>(this) = saved_vtable;
+
+    ActivateNode();
+
+    Instance = this;
+
+    event_q_ = arnew eqEventQ(1, ~0u, 64);
+    menu_camera_ = arnew asCamera();
+
+    popup_ = arnew Card2D();
+    popup_->SetNodeFlag(NODE_FLAG_UPDATE_PAUSED);
+
+    active_menu_id_ = -1;
+    next_active_menu_id_ = -1;
+}
+
+void MenuManager::CheckInput()
+{
+    static int dbg_fd = -1;
+    if (dbg_fd < 0) dbg_fd = open("/tmp/opencode/mgr_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+    write(dbg_fd, "DBG MenuManager::CheckInput\n", 28);
+
+    UIMenu* current = GetCurrentMenu();
+    if (current)
+    {
+        char buf[64];
+        int n = snprintf(buf, sizeof(buf), "DBG current menu id=%d\n", current->GetMenuID());
+        write(dbg_fd, buf, n);
+    }
+    else
+    {
+        write(dbg_fd, "DBG current menu NULL\n", 22);
+    }
+
+    if (dialog_menu_)
+    {
+        dialog_menu_->CheckInput();
+        dialog_menu_->CheckMouseHits();
+    }
+    else if (UIMenu* menu = GetCurrentMenu())
+    {
+        menu->CheckInput();
+        menu->CheckMouseHits();
+    }
+
+    if (nav_bar_)
+        nav_bar_->CheckMouseHits();
+}
+
+void MenuManager::CheckBG(UIMenu* menu)
+{
+    if (menu && menu->GetBackgroundName() && menu->GetBackgroundName()[0])
+        SetBackgroundImage(const_cast<char*>(menu->GetBackgroundName()));
+}
+
+void MenuManager::SetDefaultBackgroundImage(char* path)
+{
+    default_background_ = path;
+    SetBackgroundImage(path);
+}
+
+void MenuManager::SetBackgroundImage(char* path)
+{
+    if ((!path || !*path) && default_background_)
+        path = default_background_;
+
+    if (path && *path && menu_camera_)
+        menu_camera_->SetUnderlay(path);
 }
 
 void MenuManager::ResChange(i32 /*width*/, i32 /*height*/)
@@ -83,7 +161,14 @@ i32 MenuManager::FindMenu(i32 idm)
 }
 
 void MenuManager::AddPointer()
-{}
+{
+    if (pointer_)
+        return;
+
+    pointer_ = arnew sfPointer();
+    pointer_->Init();
+    AddChild(pointer_.get());
+}
 
 void MenuManager::AdjustPopupCard(UIMenu* menu)
 {
@@ -177,11 +262,20 @@ void MenuManager::ToggleFocus(i32 direction)
 
 void MenuManager::Update()
 {
+    write(2, "DBG MenuManager::Update\n", 24);
+
     ForceCurrentFocus();
 
     last_drawn_ = nullptr;
 
     asNode::Update();
+
+    if (menu_camera_) {
+        write(2, "DBG MenuManager: declaring camera\n", 34);
+        CullMgr()->DeclareCamera(menu_camera_.get());
+    } else {
+        write(2, "DBG MenuManager: menu_camera_ is NULL!\n", 39);
+    }
 
     for (i32 i = 0; i < num_menus_; ++i)
     {
@@ -206,7 +300,8 @@ void MenuManager::Update()
         }
     }
 
-    pointer_->Update();
+    if (pointer_)
+        pointer_->Update();
 }
 
 void MenuManager::SwitchNow(i32 id)

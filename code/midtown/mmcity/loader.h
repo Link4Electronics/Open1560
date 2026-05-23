@@ -33,19 +33,19 @@ public:
     ARTS_IMPORT ~mmLoader() override;
 
     // ?BeginTask@mmLoader@@QAEXPAULocString@@M@Z
-    ARTS_IMPORT void BeginTask(LocString* arg1, f32 arg2 = 0.0f);
+    void BeginTask(LocString* arg1, f32 arg2 = 0.0f);
 
     // ?Cull@mmLoader@@UAEXXZ
-    ARTS_IMPORT void Cull() override;
+    void Cull() override;
 
     // ?EndTask@mmLoader@@QAEXM@Z
-    ARTS_IMPORT void EndTask(f32 arg1 = 0.0f);
+    void EndTask(f32 arg1 = 0.0f);
 
     // ?Init@mmLoader@@QAEXPADMM@Z
     void Init(aconst char* underlay_name, f32 bar_x, f32 bar_y);
 
     // ?Reset@mmLoader@@QAEXXZ
-    ARTS_IMPORT void Reset();
+    void Reset();
 
     // ?SetIntroText@mmLoader@@QAEXPAULocString@@@Z
     ARTS_IMPORT void SetIntroText(LocString* arg1);

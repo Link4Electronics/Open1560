@@ -26,6 +26,10 @@ define_dummy_symbol(mmcity_loader);
 #include "eventq7/event.h"
 #include "localize/localize.h"
 
+#include "data7/printer.h"
+
+static mem::cmd_param PARAM_loadingscreen {"loadingscreen", "Show loading screens"};
+
 void mmLoader::Init(aconst char* underlay_name, f32 bar_x, f32 bar_y)
 {
     bar_x_ = UI_XPos + std::lround(UI_Width * bar_x);
@@ -43,7 +47,41 @@ void mmLoader::Init(aconst char* underlay_name, f32 bar_x, f32 bar_y)
     Update();
 }
 
-static mem::cmd_param PARAM_loadingscreen {"loadingscreen", "Show loading screens"};
+void mmLoader::Cull()
+{
+    if (!PARAM_loadingscreen.get_or(true))
+        return;
+
+    // Render camera underlay (background image)
+    camera_.DrawBegin();
+    camera_.DrawEnd();
+
+    // Render progress bar if loaded
+    if (bar_active_)
+    {
+        Pipe()->CopyClippedBitmap(bar_x_, bar_y_, bar_active_, 0, 0,
+            bar_active_->GetWidth(), bar_active_->GetHeight());
+    }
+
+    // Render task text
+    task_text_.Cull();
+    intro_text_.Cull();
+    text_node3_.Cull();
+}
+
+void mmLoader::EndTask(f32 /*percent*/)
+{
+    task_percent_ = 100;
+}
+
+void mmLoader::BeginTask(LocString* /*text*/, f32 /*percent*/)
+{
+    task_percent_ = 0;
+}
+
+void mmLoader::Reset()
+{
+}
 
 void mmLoader::Update()
 {
@@ -56,12 +94,7 @@ void mmLoader::Update()
 
     camera_.Update();
 
-    if (bar_active_)
-    {
-        current_task_percent_ = task_start_percent_;
-
-        CullMgr()->DeclareBitmap(this, bar_active_);
-    }
+    CullMgr()->DeclareCullable2D(this);
 
 #ifndef ARTS_FINAL
     // if ((current_task_percent_ == 1.0f) && (static_cast<i32>(timer_.Time()) % 2))

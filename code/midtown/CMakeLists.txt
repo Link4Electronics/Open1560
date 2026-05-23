@@ -129,6 +129,11 @@ target_compile_options(Open1560 PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
     $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 )
+find_package(PkgConfig)
+if(PkgConfig_FOUND)
+    pkg_check_modules(JPEG libjpeg)
+endif()
+
 target_link_libraries(Open1560
     arts_objs
     glad
@@ -136,7 +141,17 @@ target_link_libraries(Open1560
     SDL3::SDL3
     OpenGL::GL
     ${FREETYPE_LIBRARIES}
+    ${JPEG_LIBRARIES}
     dl
     pthread
     m
 )
+
+# Copy binary to game directory after build
+add_custom_command(TARGET Open1560 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:Open1560>
+        ${CMAKE_SOURCE_DIR}/game/Open1560
+    COMMENT "Copying Open1560 binary to game directory"
+)
+
+target_include_directories(Open1560 PRIVATE ${JPEG_INCLUDE_DIRS})

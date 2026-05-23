@@ -30,11 +30,16 @@ define_dummy_symbol(mmwidget_menu);
 #include "textfield.h"
 #include "widget.h"
 
+#include "eventq7/event.h"
+
 #include "bm_button.h"
 
 #include <algorithm>
 
 #include <SDL3/SDL_keyboard.h>
+
+#include <fcntl.h>
+#include <unistd.h>
 
 UIMenu::UIMenu(i32 menu_id)
 {
@@ -84,21 +89,47 @@ void UIMenu::BackUp()
 
 void UIMenu::CheckInput()
 {
+    static int dbg_fd = -1;
+    if (dbg_fd < 0) dbg_fd = open("/tmp/opencode/menu_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+    write(dbg_fd, "DBG UIMenu::CheckInput\n", 23);
+
     // Ignore any events while midgets are open
     if (MIDGETSPTR->IsOpen())
     {
+        write(dbg_fd, "DBG MIDGETS open, clearing\n", 27);
         MenuMgr()->GetEventQ()->Clear();
         return;
     }
 
     eqEvent event;
 
+    int pop_count = 0;
     while (MenuMgr()->GetEventQ()->Pop(&event))
     {
+        ++pop_count;
+        char buf[64];
+        int n = snprintf(buf, sizeof(buf), "DBG pop event type=%d\n", (int)event.Type);
+        write(dbg_fd, buf, n);
+
         if (event.Type != eqEventType::Keyboard)
         {
             if (event.Type == eqEventType::Mouse)
+            {
+                write(dbg_fd, "DBG mouse event\n", 16);
                 MenuMgr()->ToggleWidgetSnapping(false);
+
+                eqMouseEvent& mev = event.Mouse;
+                if (mev.ChangedButtons & mev.NewButtons)
+                {
+                    f32 x = static_cast<f32>(mev.MouseX) / (eqEventHandler::SuperQ->GetCenterX() * 2.0f);
+                    f32 y = static_cast<f32>(mev.MouseY) / (eqEventHandler::SuperQ->GetCenterY() * 2.0f);
+
+                    x = (x - menu_x_) / menu_width_;
+                    y = (y - menu_y_) / menu_height_;
+
+                    MenuMgr()->MouseAction(mev.NewButtons, x, y);
+                }
+            }
 
             continue;
         }
@@ -131,6 +162,25 @@ void UIMenu::CheckInput()
             case EQ_VK_GAMEPAD_DPAD_DOWN: kev.Key = EQ_VK_DOWN; break;
         }
 
+        // Handle navigation keys (move focus between widgets, don't activate)
+        switch (kev.Key)
+        {
+            case EQ_VK_TAB:
+                if (kev.Modifiers & EQ_KMOD_SHIFT)
+                    Decrement();
+                else
+                    Increment();
+                continue;
+            case EQ_VK_UP:
+            case EQ_VK_LEFT:
+                Decrement();
+                continue;
+            case EQ_VK_DOWN:
+            case EQ_VK_RIGHT:
+                Increment();
+                continue;
+        }
+
         if (ScanInput(&event))
         {
             if (!kev.IsMouseButton())
@@ -142,6 +192,110 @@ void UIMenu::CheckInput()
                 ClearAction();
         }
     }
+}
+
+void UIMenu::SetAction(UIMenu::eSource source)
+{
+    state_ = MENU_STATE_ACTION;
+    action_source_ = static_cast<i32>(source);
+}
+
+void UIMenu::CheckMouseHits()
+{
+    if (!IsNodeActive())
+        return;
+
+    if (MenuMgr()->Is3D())
+        return;
+
+    static int dbg_fd = -1;
+    if (dbg_fd < 0) dbg_fd = open("/tmp/opencode/mouse_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+
+    f32 mouse_x = eqEventHandler::SuperQ->GetMouseX();
+    f32 mouse_y = eqEventHandler::SuperQ->GetMouseY();
+
+    f32 center_x = eqEventHandler::SuperQ->GetCenterX();
+    f32 center_y = eqEventHandler::SuperQ->GetCenterY();
+
+    f32 x = mouse_x / (center_x * 2.0f);
+    f32 y = mouse_y / (center_y * 2.0f);
+
+    char buf[256];
+    int n = snprintf(buf, sizeof(buf), "DBG mouse=%.0f,%.0f center=%.0f,%.0f norm=%.4f,%.4f\n",
+        mouse_x, mouse_y, center_x, center_y, x, y);
+    write(dbg_fd, buf, n);
+
+    x = (x - menu_x_) / menu_width_;
+    y = (y - menu_y_) / menu_height_;
+
+    n = snprintf(buf, sizeof(buf), "DBG menu=%.4f,%.4f menu_xywh=%.4f,%.4f,%.4f,%.4f\n",
+        x, y, menu_x_, menu_y_, menu_width_, menu_height_);
+    write(dbg_fd, buf, n);
+
+    i32 hovered = -1;
+
+    // Only check widgets if mouse is within menu bounds
+    if (x >= 0.0f && x <= 1.0f && y >= 0.0f && y <= 1.0f)
+    {
+        for (i32 i = 0; i < widget_count_; ++i)
+        {
+            uiWidget* widget = widgets_[i];
+            if (!widget || !widget->Enabled)
+                continue;
+
+            if (x >= widget->MinX && x <= widget->MaxX && y >= widget->MinY && y <= widget->MaxY)
+            {
+                hovered = i;
+                char buf2[128];
+                int n2 = snprintf(buf2, sizeof(buf2), "DBG HOVER i=%d min=%.4f,%.4f max=%.4f,%.4f\n",
+                    i, widget->MinX, widget->MinY, widget->MaxX, widget->MaxY);
+                write(dbg_fd, buf2, n2);
+                break;
+            }
+        }
+    }
+
+    uiWidget* active = GetActiveWidget();
+    if (active && p_b_state_ && *p_b_state_ != hovered)
+    {
+        active->MouseHit = 0;
+        active->Switch(false);
+    }
+
+    if (hovered >= 0)
+    {
+        *p_b_state_ = hovered;
+        widgets_[hovered]->MouseHit = 1;
+        widgets_[hovered]->Switch(true);
+    }
+}
+
+uiWidget* UIMenu::MouseHitCheck(i32 button, f32 x, f32 y)
+{
+    if (!IsNodeActive())
+        return nullptr;
+
+    for (i32 i = 0; i < widget_count_; ++i)
+    {
+        uiWidget* widget = widgets_[i];
+
+        if (!widget || !widget->Enabled)
+            continue;
+
+        if (x >= widget->MinX && x <= widget->MaxX && y >= widget->MinY && y <= widget->MaxY)
+        {
+            *p_b_state_ = i;
+            widget->Active = true;
+            widget->MouseHit = 1;
+            widget->MouseButton = button;
+
+            SetAction(eSource::Mouse);
+
+            return widget;
+        }
+    }
+
+    return nullptr;
 }
 
 void UIMenu::AddWidget(uiWidget* widget, aconst char* label, f32 x, f32 y, f32 w, f32 h, i32 id, aconst char* icon)
@@ -439,6 +593,6 @@ UIBMButton* UIMenu::AddBMButton(i32 idc, aconst char* name, f32 x, f32 y, i32 ty
 {
     Ptr<UIBMButton> button = arnew UIBMButton();
     button->Init(const_cast<char*>(name), x, y, type, 0, arg7, arg8, arg9, nullptr, cb_1, arg10);
-    AddWidget(button.get(), name, x, y, 0.0f, 0.0f, idc, nullptr);
+    AddWidget(button.get(), name, x, y, button->Width, button->Height, idc, nullptr);
     return button.release();
 }

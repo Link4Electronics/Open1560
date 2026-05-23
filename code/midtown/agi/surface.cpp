@@ -23,11 +23,309 @@ define_dummy_symbol(agi_surface);
 #include "agi/rgba.h"
 #include "agiworld/texsheet.h"
 #include "cmodel.h"
+#include "stream/stream.h"
 #include "texdef.h"
 
 #include <emmintrin.h>
 
-struct jpeg_decompress_struct;
+#include <jpeglib.h>
+
+static Owner<agiSurfaceDesc> TryLoadDDS(aconst char* full_path, i32 width, i32 height)
+{
+    if (Owner<Stream> stream {arts_fopen(full_path, "r")})
+    {
+        u32 magic = 0;
+        if (stream->Read(&magic, sizeof(magic)) != sizeof(magic) || magic != 0x20534444) // "DDS "
+            return nullptr;
+
+        // DDS files store the header in 32-bit DDSURFACEDESC2 format (124 bytes).
+        // On 64-bit, agiSurfaceDesc is larger due to pointers, so read header manually.
+        u8 header_data[0x7C];
+        if (stream->Read(header_data, sizeof(header_data)) != sizeof(header_data))
+            return nullptr;
+
+        Ptr<agiSurfaceDesc> result = arnew agiSurfaceDesc();
+
+        auto read_u32 = [&](u32 offset) -> u32 {
+            return *reinterpret_cast<u32*>(&header_data[offset]);
+        };
+
+        auto read_i32 = [&](u32 offset) -> i32 {
+            return *reinterpret_cast<i32*>(&header_data[offset]);
+        };
+
+        result->Size = read_u32(0x00);
+        result->Flags = read_u32(0x04);
+        result->Height = read_u32(0x08);
+        result->Width = read_u32(0x0C);
+        result->Pitch = read_i32(0x10);
+        result->BackBufferCount = read_u32(0x14);
+        result->MipMapCount = read_u32(0x18);
+        result->AlphaBitDepth = read_u32(0x1C);
+        // skip lpLut at offset 0x20 (4 bytes on 32-bit)
+        // skip Surface at offset 0x24 (4 bytes on 32-bit)
+        result->DestOverlay.Low = read_u32(0x28);
+        result->DestOverlay.High = read_u32(0x2C);
+        result->DestBlt.Low = read_u32(0x30);
+        result->DestBlt.High = read_u32(0x34);
+        result->SrcOverlay.Low = read_u32(0x38);
+        result->SrcOverlay.High = read_u32(0x3C);
+        result->SrcBlt.Low = read_u32(0x40);
+        result->SrcBlt.High = read_u32(0x44);
+        result->PixelFormat.Size = read_u32(0x48);
+        result->PixelFormat.Flags = read_u32(0x4C);
+        result->PixelFormat.FourCC = read_u32(0x50);
+        result->PixelFormat.RGBBitCount = read_u32(0x54);
+        result->PixelFormat.RBitMask = read_u32(0x58);
+        result->PixelFormat.GBitMask = read_u32(0x5C);
+        result->PixelFormat.BBitMask = read_u32(0x60);
+        result->PixelFormat.RGBAlphaBitMask = read_u32(0x64);
+        result->SCaps.Caps = read_u32(0x68);
+        result->SCaps.Caps2 = read_u32(0x6C);
+        result->SCaps.Caps3 = read_u32(0x70);
+        result->SCaps.Caps4 = read_u32(0x74);
+        result->TextureStage = read_u32(0x78);
+
+        if (width)
+            result->Width = width;
+
+        if (height)
+            result->Height = height;
+
+        result->FixPitch();
+        result->Load();
+
+        isize pixel_size = result->Pitch * result->Height;
+
+        if (stream->Read(result->Surface, pixel_size) != static_cast<isize>(pixel_size))
+        {
+            result->Unload();
+            return nullptr;
+        }
+
+        // DDS pixels are top-to-bottom (DirectX). Convert to bottom-to-top (OpenGL).
+        if (result->Pitch > 0 && result->Height > 1)
+        {
+            u8* pixels = static_cast<u8*>(result->Surface);
+            u32 row_size = static_cast<u32>(result->Pitch);
+            for (u32 y = 0; y < result->Height / 2; ++y)
+            {
+                u8* a = pixels + y * row_size;
+                u8* b = pixels + (result->Height - 1 - y) * row_size;
+                for (u32 x = 0; x < row_size; ++x)
+                    std::swap(a[x], b[x]);
+            }
+        }
+
+        // Validate
+        if (result->Width == 0 || result->Height == 0 || result->Width > 4096 || result->Height > 4096)
+        {
+            result->Unload();
+            return nullptr;
+        }
+
+        return as_owner result;
+    }
+
+    return nullptr;
+}
+
+static Owner<agiSurfaceDesc> TryLoadBMF(aconst char* full_path, i32 width, i32 height)
+{
+    if (Owner<Stream> stream {arts_fopen(full_path, "r")})
+    {
+        // BMF files store the agiSurfaceDesc header in 32-bit format (0x7C bytes).
+        // On 64-bit, agiSurfaceDesc is larger due to pointers.
+        u8 header_data[0x7C];
+        if (stream->Read(header_data, sizeof(header_data)) != sizeof(header_data))
+            return nullptr;
+
+        Ptr<agiSurfaceDesc> result = arnew agiSurfaceDesc();
+
+        auto read_u32 = [&](u32 offset) -> u32 {
+            return *reinterpret_cast<u32*>(&header_data[offset]);
+        };
+
+        auto read_i32 = [&](u32 offset) -> i32 {
+            return *reinterpret_cast<i32*>(&header_data[offset]);
+        };
+
+        result->Size = read_u32(0x00);
+        result->Flags = read_u32(0x04);
+        result->Height = read_u32(0x08);
+        result->Width = read_u32(0x0C);
+        result->Pitch = read_i32(0x10);
+        result->BackBufferCount = read_u32(0x14);
+        result->MipMapCount = read_u32(0x18);
+        result->AlphaBitDepth = read_u32(0x1C);
+        result->DestOverlay.Low = read_u32(0x28);
+        result->DestOverlay.High = read_u32(0x2C);
+        result->DestBlt.Low = read_u32(0x30);
+        result->DestBlt.High = read_u32(0x34);
+        result->SrcOverlay.Low = read_u32(0x38);
+        result->SrcOverlay.High = read_u32(0x3C);
+        result->SrcBlt.Low = read_u32(0x40);
+        result->SrcBlt.High = read_u32(0x44);
+        result->PixelFormat.Size = read_u32(0x48);
+        result->PixelFormat.Flags = read_u32(0x4C);
+        result->PixelFormat.FourCC = read_u32(0x50);
+        result->PixelFormat.RGBBitCount = read_u32(0x54);
+        result->PixelFormat.RBitMask = read_u32(0x58);
+        result->PixelFormat.GBitMask = read_u32(0x5C);
+        result->PixelFormat.BBitMask = read_u32(0x60);
+        result->PixelFormat.RGBAlphaBitMask = read_u32(0x64);
+        result->SCaps.Caps = read_u32(0x68);
+        result->SCaps.Caps2 = read_u32(0x6C);
+        result->SCaps.Caps3 = read_u32(0x70);
+        result->SCaps.Caps4 = read_u32(0x74);
+        result->TextureStage = read_u32(0x78);
+
+        if (width)
+            result->Width = width;
+
+        if (height)
+            result->Height = height;
+
+        result->FixPitch();
+        result->Load();
+
+        isize pixel_size = result->Pitch * result->Height;
+
+        if (stream->Read(result->Surface, pixel_size) != static_cast<isize>(pixel_size))
+        {
+            result->Unload();
+            return nullptr;
+        }
+
+        // Check if data looks plausible
+        if (result->Width == 0 || result->Height == 0 || result->Width > 4096 || result->Height > 4096)
+        {
+            result->Unload();
+            return nullptr;
+        }
+
+        return as_owner result;
+    }
+
+    return nullptr;
+}
+
+static Owner<agiSurfaceDesc> TryLoadJPG(aconst char* full_path, i32 width, i32 height)
+{
+    if (Owner<Stream> stream {arts_fopen(full_path, "r")})
+    {
+        isize file_size = stream->Size();
+
+        if (file_size <= 0)
+            return nullptr;
+
+        Ptr<u8[]> file_data = arnewa u8[file_size];
+
+        if (stream->Read(file_data.get(), file_size) != file_size)
+            return nullptr;
+
+        struct jpeg_decompress_struct cinfo;
+        struct jpeg_error_mgr jerr;
+
+        cinfo.err = jpeg_std_error(&jerr);
+        jpeg_create_decompress(&cinfo);
+        jpeg_mem_src(&cinfo, file_data.get(), static_cast<unsigned long>(file_size));
+        jpeg_read_header(&cinfo, TRUE);
+
+        cinfo.scale_num = 1;
+        cinfo.scale_denom = 1;
+        cinfo.out_color_space = JCS_EXT_BGRX;
+
+        jpeg_calc_output_dimensions(&cinfo);
+        jpeg_start_decompress(&cinfo);
+
+        Ptr<agiSurfaceDesc> result = arnew agiSurfaceDesc();
+
+        result->Size = sizeof(agiSurfaceDesc);
+        result->Flags = AGISD_WIDTH | AGISD_HEIGHT | AGISD_PITCH | AGISD_PIXELFORMAT;
+        result->Width = cinfo.output_width;
+        result->Height = cinfo.output_height;
+        result->Pitch = (cinfo.output_width * 4 + 3) & ~3;
+        result->BackBufferCount = 0;
+        result->MipMapCount = 0;
+        result->AlphaBitDepth = 0;
+        result->PixelFormat = PixelFormat_X8R8G8B8;
+
+        result->Load();
+
+        if (width)
+            result->Width = width;
+
+        if (height)
+            result->Height = height;
+
+        JSAMPROW row_pointer[1];
+        while (cinfo.output_scanline < cinfo.output_height)
+        {
+            u8* row = static_cast<u8*>(result->Surface) + (cinfo.output_scanline * result->Pitch);
+            row_pointer[0] = row;
+            jpeg_read_scanlines(&cinfo, row_pointer, 1);
+        }
+
+        jpeg_finish_decompress(&cinfo);
+        jpeg_destroy_decompress(&cinfo);
+
+        return as_owner result;
+    }
+
+    return nullptr;
+}
+
+static Owner<agiSurfaceDesc> CreateFallback(i32 width, i32 height)
+{
+    Ptr<agiSurfaceDesc> result = arnew agiSurfaceDesc();
+
+    result->Size = sizeof(agiSurfaceDesc);
+    result->Flags = AGISD_WIDTH | AGISD_HEIGHT | AGISD_PITCH | AGISD_PIXELFORMAT;
+    result->Width = width ? static_cast<u32>(width) : 640;
+    result->Height = height ? static_cast<u32>(height) : 480;
+    result->Pitch = (result->Width * 4 + 3) & ~3;
+    result->BackBufferCount = 0;
+    result->MipMapCount = 0;
+    result->AlphaBitDepth = 0;
+    result->PixelFormat = PixelFormat_X8R8G8B8;
+
+    result->Load();
+    result->Clear();
+
+    // Fill with a uniform dark color (subtle fallback: R=8, G=8, B=16, A=255)
+    u8* pixels = static_cast<u8*>(result->Surface);
+    for (u32 y = 0; y < result->Height; ++y)
+        for (u32 x = 0; x < result->Width; ++x)
+            *reinterpret_cast<u32*>(&pixels[y * result->Pitch + x * 4]) = 0xFF080810;
+
+    return as_owner result;
+}
+
+// Override the broken assembly weak stub that doesn't handle unique_ptr return ABI
+[[nodiscard]] Owner<agiSurfaceDesc> agiSurfaceDesc::Load(
+    aconst char* name, aconst char* path, i32 /*index*/, i32 /*pack*/, i32 width, i32 height)
+{
+    auto full_path = arts_formatf<128>("%s/%s", path, name);
+
+    if (Owner<agiSurfaceDesc> result = TryLoadBMF(full_path, width, height))
+        return result;
+
+    auto jpg_path = arts_formatf<128>("%s.jpg", full_path.get());
+    if (Owner<agiSurfaceDesc> result = TryLoadJPG(jpg_path, width, height))
+        return result;
+
+    auto dds_path = arts_formatf<128>("%s.dds", full_path.get());
+    if (Owner<agiSurfaceDesc> result = TryLoadDDS(dds_path, width, height))
+        return result;
+
+    auto bmf_path = arts_formatf<128>("%s.bmf", full_path.get());
+    if (Owner<agiSurfaceDesc> result = TryLoadBMF(bmf_path, width, height))
+        return result;
+
+    return CreateFallback(width, height);
+    return CreateFallback(width, height);
+}
 
 // clang-format off
 const agiPixelFormat PixelFormat_A8R8G8B8 = {sizeof(agiPixelFormat), AGIPF_RGB | AGIPF_ALPHAPIXELS, 0, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000};
@@ -276,6 +574,11 @@ void agiSurfaceDesc::CopyFrom(agiSurfaceDesc* src, i32 src_lod, agiTexParameters
     {
         switch (src->PixelFormat.RBitMask)
         {
+            case 0xFF0000u: // 8888
+                if (GetPixelSize() == 4 && src->GetPixelSize() == 4)
+                    copy_row = copyrow_basic<u32>;
+                break;
+
             case 0xF800: // 565
                 switch (PixelFormat.RBitMask)
                 {

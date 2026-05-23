@@ -58,7 +58,16 @@ private:
     // ?Cull@Card2D@@EAEXXZ
     ARTS_IMPORT void Cull() override;
 
+#ifdef ARTS_STANDALONE
+    asCamera* camera_ {};
+    f32 x_ {};
+    f32 y_ {};
+    f32 w_ {};
+    f32 h_ {};
+    f32 alpha_ {};
+#else
     u8 gap20[0x18];
+#endif
 };
 
 check_size(Card2D, 0x38);

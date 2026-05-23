@@ -28,6 +28,8 @@
 #include "stream/stream.h"
 
 #include "glcontext.h"
+
+#include <SDL3/SDL_video.h>
 #include "glstream.h"
 #include "gltexdef.h"
 
@@ -253,21 +255,19 @@ i32 agiGLRasterizer::BeginGfx()
     // https://nlguillemot.wordpress.com/2016/12/07/reversed-z-in-opengl/
     reversed_z_ = false;
 
-#if 0
-    if (agiGL->HasExtension(/*450,*/ "GL_ARB_clip_control"))
+    // Wayland/EGL uses a different default framebuffer coordinate system than X11/GLX.
+    // With EGL, (0,0) is top-left and Y increases downward (matching screen coords).
+    // With GLX, (0,0) is bottom-left and Y increases upward (standard OpenGL).
+    // The projection matrix in this game converts from screen coords (Y-down) to NDC.
+    // When flip_winding_ is false, screen Y=0 (top) maps to NDC Y=+1 (top).
+    // This works on X11/GLX because the default framebuffer is Y-up.
+    // On Wayland/EGL, the default framebuffer is Y-down, so we need flip_winding_ = true
+    // which maps screen Y=0 (top) to NDC Y=-1 (bottom), effectively flipping the output.
+    const char* video_driver = SDL_GetCurrentVideoDriver();
+    if (video_driver && strcmp(video_driver, "wayland") == 0)
     {
-        // Broken on Intel
         flip_winding_ = true;
-        zero_to_one_ = true;
-
-        glClipControl(
-            flip_winding_ ? GL_UPPER_LEFT : GL_LOWER_LEFT, zero_to_one_ ? GL_ZERO_TO_ONE : GL_NEGATIVE_ONE_TO_ONE);
     }
-    else if (agiGL->HasExtension("GL_NV_depth_buffer_float"))
-    {
-        glDepthRangedNV(-1.0, 1.0);
-    }
-#endif
 
     if (!agiGL->IsLegacyCompat() || (agiGL->HasVersion(200) && !PARAM_ancientgl.get_or(false)))
     {
@@ -507,7 +507,7 @@ void agiGLRasterizer::InitModern()
     glUniform1f(uniform_alpha_ref_, alpha_ref_);
 
     uniform_tex_env_ = glGetUniformLocation(shader_, "u_TexEnv");
-    tex_env_ = agiTexEnv::Disable;
+    tex_env_ = agiTexEnv::Replace;
     glUniform2i(uniform_tex_env_, tex_env_ != agiTexEnv::Replace, tex_env_ != agiTexEnv::Disable);
 
     uniform_fog_mode_ = glGetUniformLocation(shader_, "u_FogMode");
