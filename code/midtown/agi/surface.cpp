@@ -30,6 +30,8 @@ define_dummy_symbol(agi_surface);
 
 #include <jpeglib.h>
 
+
+
 static Owner<agiSurfaceDesc> TryLoadDDS(aconst char* full_path, i32 width, i32 height)
 {
     if (Owner<Stream> stream {arts_fopen(full_path, "r")})

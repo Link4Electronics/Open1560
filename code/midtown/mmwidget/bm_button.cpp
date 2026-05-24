@@ -62,16 +62,7 @@ void UIBMButton::Init(char* name, f32 x, f32 y, i32 type, i32 /*arg5*/, i32* /*a
     Width = MaxX - MinX;
     Height = MaxY - MinY;
 
-    // Determine division type from button type
-    switch (type)
-    {
-        case 3: div_type_ = 0; break;
-        case 4: div_type_ = 1; break;
-        case 5: div_type_ = 2; break;
-        case 6: div_type_ = 2; break;
-        case 7: div_type_ = 1; break;
-        default: div_type_ = 0; break;
-    }
+    div_type_ = type;
 
     // Load button bitmap
     if (name && *name)
@@ -83,6 +74,15 @@ void UIBMButton::Init(char* name, f32 x, f32 y, i32 type, i32 /*arg5*/, i32* /*a
             bitmap_height_ = bitmap_->GetHeight();
             i32 div = GetDiv();
             frame_height_ = (div > 0) ? (bitmap_height_ / div) : bitmap_height_;
+
+            if (frame_height_ > 0 && bitmap_width_ > 0)
+            {
+                Width = static_cast<f32>(bitmap_width_) / 640.0f;
+                Height = Width * frame_height_ / bitmap_width_;
+                MaxX = MinX + Width;
+                MaxY = MinY + Height;
+            }
+
         }
     }
 }
@@ -106,25 +106,26 @@ void UIBMButton::Cull()
     i32 pw = static_cast<i32>(sw * Pipe()->GetWidth());
     i32 ph = static_cast<i32>(sh * Pipe()->GetHeight());
 
-    if (bitmap_ && frame_height_ > 0)
+    if (bitmap_)
     {
-        i32 frame = state_;
-        if (frame < 0) frame = 0;
-        i32 num_frames = GetDiv();
-        if (frame >= num_frames) frame = num_frames - 1;
-
-        i32 src_y = frame * frame_height_;
-
-        static int s_fd = -1;
-        if (s_fd < 0) s_fd = open("/tmp/opencode/bm_cull_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
-        static int s_count = 0;
-        if (++s_count % 60 == 0) {
-            char buf[128];
-            int n = snprintf(buf, sizeof(buf), "DBG Cull frame=%d state_=%d Active=%d Label=%s\n", frame, state_, (int)Active, Label ? Label : "null");
-            write(s_fd, buf, n);
+        i32 num_frames = (div_type_ > 0) ? div_type_ : 1;
+        i32 frame_h = (num_frames > 1) ? (bitmap_height_ / num_frames) : bitmap_height_;
+        i32 frame = 0;
+        if (num_frames > 1)
+        {
+            frame = num_frames - 1 - state_;
+            if (frame < 0) frame = 0;
+            if (frame >= num_frames) frame = num_frames - 1;
         }
 
-        Pipe()->StretchCopyBitmap(px, py, pw, ph, bitmap_.get(), 0, src_y, bitmap_width_, frame_height_);
+        if (div_type_ < 2 && bitmap_height_ > 50)
+            Pipe()->ClearRect(px, py, pw, ph, 0x0000FF00);
+        else
+            Pipe()->ClearRect(px, py, pw, ph, 0x000000FF);
+
+        i32 src_y = frame * frame_h;
+
+        Pipe()->StretchCopyBitmap(px, py, pw, ph, bitmap_.get(), 0, src_y, bitmap_width_, frame_h);
     }
     else
     {
@@ -144,15 +145,8 @@ void UIBMButton::Action(eqEvent arg1)
 
 void UIBMButton::Switch(b32 active)
 {
-    static int s_fd = -1;
-    if (s_fd < 0) s_fd = open("/tmp/opencode/bm_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
-
     if (active != Active)
     {
-        char buf[128];
-        int n = snprintf(buf, sizeof(buf), "DBG Switch active=%d MouseHit=%d state_=%d Label=%s\n", (int)active, (int)MouseHit, state_, Label ? Label : "null");
-        write(s_fd, buf, n);
-
         Active = active;
         if (active)
         {
@@ -225,6 +219,81 @@ static SDL_AudioStream* g_UIBeepStream = nullptr;
 static u8* g_BeepData = nullptr;
 static int g_BeepLen = 0;
 
+static SDL_AudioStream* g_ClickBeepStream = nullptr;
+static u8* g_ClickBeepData = nullptr;
+static int g_ClickBeepLen = 0;
+
+static bool LoadSoundFile(const char* vfs_path, SDL_AudioStream*& out_stream, u8*& out_data, int& out_len)
+{
+    Ptr<Stream> stream = as_ptr FileSystem::OpenAny(vfs_path, true, nullptr, 4096);
+    if (!stream)
+        return false;
+
+    i32 file_size = stream->Size();
+    if (file_size <= 0)
+        return false;
+
+    Ptr<u8[]> file_data = arnewa u8[file_size];
+    stream->Read(file_data.get(), file_size);
+
+    if (file_size <= 12 || file_data[0] != 'R' || file_data[1] != 'I' || file_data[2] != 'F' || file_data[3] != 'F')
+        return false;
+
+    u16 num_channels = 1;
+    u32 sample_rate = 22050;
+    u16 bits_per_sample = 16;
+    i32 data_offset = 0;
+    i32 data_size = 0;
+    i32 offset = 12;
+
+    while (offset + 8 <= file_size)
+    {
+        u32 chunk_id = *reinterpret_cast<u32*>(&file_data[offset]);
+        u32 chunk_size = *reinterpret_cast<u32*>(&file_data[offset + 4]);
+
+        if (chunk_id == 0x20746D66 && offset + 24 <= file_size)
+        {
+            u16 audio_format = *reinterpret_cast<u16*>(&file_data[offset + 8]);
+            if (audio_format != 1)
+                break;
+            num_channels = *reinterpret_cast<u16*>(&file_data[offset + 10]);
+            sample_rate = *reinterpret_cast<u32*>(&file_data[offset + 12]);
+            bits_per_sample = *reinterpret_cast<u16*>(&file_data[offset + 22]);
+        }
+        else if (chunk_id == 0x61746164 && chunk_size > 0)
+        {
+            data_offset = offset + 8;
+            data_size = chunk_size;
+            break;
+        }
+
+        offset += 8 + chunk_size;
+        if (chunk_size % 2)
+            ++offset;
+    }
+
+    if (data_size <= 0)
+        return false;
+
+    SDL_AudioSpec spec;
+    SDL_zero(spec);
+    spec.format = (bits_per_sample == 16) ? SDL_AUDIO_S16 : SDL_AUDIO_U8;
+    spec.channels = num_channels;
+    spec.freq = static_cast<int>(sample_rate);
+
+    out_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
+    if (!out_stream)
+        return false;
+
+    out_len = data_size;
+    out_data = static_cast<u8*>(SDL_malloc(data_size));
+    if (out_data)
+        SDL_memcpy(out_data, &file_data[data_offset], data_size);
+
+    SDL_ResumeAudioStreamDevice(out_stream);
+    return true;
+}
+
 void UIBMButton::PlaySound()
 {
     if (!g_UIBeepStream)
@@ -238,130 +307,91 @@ void UIBMButton::PlaySound()
     }
 }
 
+void UIBMButton::PlayClickSound()
+{
+    if (!g_ClickBeepStream)
+        AllocateSounds();
+
+    if (g_ClickBeepStream && g_ClickBeepData)
+    {
+        int queued = SDL_GetAudioStreamQueued(g_ClickBeepStream);
+        if (queued < g_ClickBeepLen * 2)
+            SDL_PutAudioStreamData(g_ClickBeepStream, g_ClickBeepData, g_ClickBeepLen);
+    }
+}
+
 void UIBMButton::AllocateSounds()
 {
-    if (g_UIBeepStream)
+    if (g_UIBeepStream && g_ClickBeepStream)
         return;
 
     if (!SDL_InitSubSystem(SDL_INIT_AUDIO))
         return;
 
-    // Try to load MOVESELECTOR from the game's audio.ar archive
-    Ptr<Stream> stream;
-
-    const char* paths[] = {
-        "AUD/AUD22/MOVESELECTOR.22K.WAV",
-        "AUD/AUD11/MOVESELECTOR.11K.WAV",
-    };
-
-    for (const char* vfs_path : paths)
+    // Load hover sound (MOVESELECTOR)
     {
-        stream = as_ptr FileSystem::OpenAny(vfs_path, true, nullptr, 4096);
-        if (stream)
-            break;
-    }
+        const char* paths[] = {
+            "AUD/AUD22/MOVESELECTOR.22K.WAV",
+            "AUD/AUD11/MOVESELECTOR.11K.WAV",
+        };
 
-    if (stream)
-    {
-        i32 file_size = stream->Size();
-
-        if (file_size > 0)
+        bool loaded = false;
+        for (const char* vfs_path : paths)
         {
-            Ptr<u8[]> file_data = arnewa u8[file_size];
-            stream->Read(file_data.get(), file_size);
-
-            if (file_size > 12 && file_data[0] == 'R' && file_data[1] == 'I' && file_data[2] == 'F' && file_data[3] == 'F')
+            if (LoadSoundFile(vfs_path, g_UIBeepStream, g_BeepData, g_BeepLen))
             {
-                u16 num_channels = 1;
-                u32 sample_rate = 22050;
-                u16 bits_per_sample = 16;
-                i32 data_offset = 0;
-                i32 data_size = 0;
+                loaded = true;
+                break;
+            }
+        }
 
-                i32 offset = 12;
+        if (!loaded)
+        {
+            // Fallback: generate a short 440Hz sine wave beep (~80ms)
+            SDL_AudioSpec spec;
+            SDL_zero(spec);
+            spec.format = SDL_AUDIO_S16;
+            spec.channels = 2;
+            spec.freq = 22050;
 
-                while (offset + 8 <= file_size)
+            g_UIBeepStream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
+            if (g_UIBeepStream)
+            {
+                int sample_count = static_cast<int>(spec.freq * 80 / 1000);
+                g_BeepLen = sample_count * 2 * 2;
+                g_BeepData = static_cast<u8*>(SDL_malloc(g_BeepLen));
+
+                if (g_BeepData)
                 {
-                    u32 chunk_id = *reinterpret_cast<u32*>(&file_data[offset]);
-                    u32 chunk_size = *reinterpret_cast<u32*>(&file_data[offset + 4]);
-
-                    if (chunk_id == 0x20746D66 && offset + 24 <= file_size)
+                    i16* samples = reinterpret_cast<i16*>(g_BeepData);
+                    for (int i = 0; i < sample_count; ++i)
                     {
-                        u16 audio_format = *reinterpret_cast<u16*>(&file_data[offset + 8]);
-                        if (audio_format != 1)
-                            break;
-
-                        num_channels = *reinterpret_cast<u16*>(&file_data[offset + 10]);
-                        sample_rate = *reinterpret_cast<u32*>(&file_data[offset + 12]);
-                        bits_per_sample = *reinterpret_cast<u16*>(&file_data[offset + 22]);
-                    }
-                    else if (chunk_id == 0x61746164 && chunk_size > 0)
-                    {
-                        data_offset = offset + 8;
-                        data_size = chunk_size;
-                        break;
+                        f32 t = static_cast<f32>(i) / static_cast<f32>(spec.freq);
+                        f32 envelope = 1.0f - (static_cast<f32>(i) / static_cast<f32>(sample_count));
+                        i16 sample = static_cast<i16>(std::sin(t * 440.0f * 2.0f * ARTS_PI) * 16000.0f * envelope);
+                        samples[i * 2 + 0] = sample;
+                        samples[i * 2 + 1] = sample;
                     }
 
-                    offset += 8 + chunk_size;
-
-                    if (chunk_size % 2)
-                        ++offset;
-                }
-
-                if (data_size > 0)
-                {
-                    SDL_AudioSpec spec;
-                    SDL_zero(spec);
-                    spec.format = (bits_per_sample == 16) ? SDL_AUDIO_S16 : SDL_AUDIO_U8;
-                    spec.channels = num_channels;
-                    spec.freq = static_cast<int>(sample_rate);
-
-                    g_UIBeepStream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
-
-                    if (g_UIBeepStream)
-                    {
-                        g_BeepLen = data_size;
-                        g_BeepData = static_cast<u8*>(SDL_malloc(data_size));
-
-                        if (g_BeepData)
-                            SDL_memcpy(g_BeepData, &file_data[data_offset], data_size);
-
-                        SDL_ResumeAudioStreamDevice(g_UIBeepStream);
-                        return;
-                    }
+                    SDL_ResumeAudioStreamDevice(g_UIBeepStream);
                 }
             }
         }
     }
 
-    // Fallback: generate a short 440Hz sine wave beep (~80ms)
-    SDL_AudioSpec spec;
-    SDL_zero(spec);
-    spec.format = SDL_AUDIO_S16;
-    spec.channels = 2;
-    spec.freq = 22050;
-
-    g_UIBeepStream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
-    if (!g_UIBeepStream)
-        return;
-
-    int sample_count = static_cast<int>(spec.freq * 80 / 1000);
-    g_BeepLen = sample_count * 2 * 2;
-    g_BeepData = static_cast<u8*>(SDL_malloc(g_BeepLen));
-
-    if (g_BeepData)
+    // Load click sound (SELECTIONMADE)
+    if (!g_ClickBeepStream)
     {
-        i16* samples = reinterpret_cast<i16*>(g_BeepData);
-        for (int i = 0; i < sample_count; ++i)
-        {
-            f32 t = static_cast<f32>(i) / static_cast<f32>(spec.freq);
-            f32 envelope = 1.0f - (static_cast<f32>(i) / static_cast<f32>(sample_count));
-            i16 sample = static_cast<i16>(std::sin(t * 440.0f * 2.0f * ARTS_PI) * 16000.0f * envelope);
-            samples[i * 2 + 0] = sample;
-            samples[i * 2 + 1] = sample;
-        }
+        const char* paths[] = {
+            "AUD/AUD22/SELECTIONMADE.22K.WAV",
+            "AUD/AUD11/SELECTIONMADE.11K.WAV",
+        };
 
-        SDL_ResumeAudioStreamDevice(g_UIBeepStream);
+        for (const char* vfs_path : paths)
+        {
+            if (LoadSoundFile(vfs_path, g_ClickBeepStream, g_ClickBeepData, g_ClickBeepLen))
+                break;
+        }
     }
 }
 
@@ -379,13 +409,7 @@ void UIBMButton::GetHitArea(f32& arg1, f32& arg2)
 
 i32 UIBMButton::GetDiv()
 {
-    switch (div_type_)
-    {
-        case 0: return 3;
-        case 1: return 4;
-        case 2: return 5;
-        default: return 1;
-    }
+    return div_type_;
 }
 
 void UIBMButton::DoToggle()

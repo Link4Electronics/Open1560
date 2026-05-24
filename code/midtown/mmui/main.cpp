@@ -27,10 +27,15 @@ MainMenu::MainMenu(i32 idd)
 {
     AssignName(LOC_TEXT("Main Menu"));
 
-    AddBMButton(IDC_MAIN_MENU_RECORDS, "race_rec"_xconst, UI_LEFT_MARGIN, 0.1f, 4);
-    AddBMButton(IDC_MAIN_MENU_MULTI, "main_multi"_xconst, UI_LEFT_MARGIN, 0.25f, 4);
-    AddBMButton(IDC_MAIN_MENU_SINGLE, "main_single"_xconst, UI_LEFT_MARGIN, 0.4f, 4);
-    AddBMButton(IDC_MAIN_MENU_QUICK, "main_quick"_xconst, UI_LEFT_MARGIN, 0.55f, 4);
+    AddBMButton(IDC_MAIN_MENU_QUICK, "main_quick"_xconst, UI_LEFT_MARGIN, 0.1f, 4);
+    AddBMButton(IDC_MAIN_MENU_SINGLE, "main_single"_xconst, UI_LEFT_MARGIN, 0.25f, 4);
+    AddBMButton(IDC_MAIN_MENU_MULTI, "main_multi"_xconst, UI_LEFT_MARGIN, 0.4f, 4);
+    AddBMButton(IDC_MAIN_MENU_RECORDS, "race_rec"_xconst, UI_LEFT_MARGIN, 0.55f, 4);
+
+    AddBMButton(IDC_MAIN_MENU_OPTIONS, "mnav_opt"_xconst, 0.72f, 0.0f, 2);
+    AddBMButton(IDC_MAIN_MENU_HELP, "mnav_help"_xconst, 0.80f, 0.0f, 2);
+    AddBMButton(IDC_MAIN_MENU_MINIMIZE, "mnav_stow"_xconst, 0.88f, 0.0f, 2);
+    AddBMButton(IDC_MAIN_MENU_CLOSE, "mnav_exit"_xconst, 0.96f, 0.0f, 2);
 
     SetBstate(0);
 }

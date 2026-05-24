@@ -71,22 +71,6 @@ MenuManager::MenuManager()
 
 void MenuManager::CheckInput()
 {
-    static int dbg_fd = -1;
-    if (dbg_fd < 0) dbg_fd = open("/tmp/opencode/mgr_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
-    write(dbg_fd, "DBG MenuManager::CheckInput\n", 28);
-
-    UIMenu* current = GetCurrentMenu();
-    if (current)
-    {
-        char buf[64];
-        int n = snprintf(buf, sizeof(buf), "DBG current menu id=%d\n", current->GetMenuID());
-        write(dbg_fd, buf, n);
-    }
-    else
-    {
-        write(dbg_fd, "DBG current menu NULL\n", 22);
-    }
-
     if (dialog_menu_)
     {
         dialog_menu_->CheckInput();
@@ -262,20 +246,14 @@ void MenuManager::ToggleFocus(i32 direction)
 
 void MenuManager::Update()
 {
-    write(2, "DBG MenuManager::Update\n", 24);
-
     ForceCurrentFocus();
 
     last_drawn_ = nullptr;
 
     asNode::Update();
 
-    if (menu_camera_) {
-        write(2, "DBG MenuManager: declaring camera\n", 34);
+    if (menu_camera_)
         CullMgr()->DeclareCamera(menu_camera_.get());
-    } else {
-        write(2, "DBG MenuManager: menu_camera_ is NULL!\n", 39);
-    }
 
     for (i32 i = 0; i < num_menus_; ++i)
     {

@@ -23,6 +23,10 @@ define_dummy_symbol(mmgame_interface);
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <SDL3/SDL_video.h>
+#include <SDL3/SDL_events.h>
+
+#include "pcwindis/dxinit.h"
 #include "agi/rsys.h"
 #include "mmui/main.h"
 #include "agisw/swrend.h"
@@ -41,6 +45,7 @@ define_dummy_symbol(mmgame_interface);
 #include "mmnetwork/network.h"
 #include "mmwidget/manager.h"
 #include "mmwidget/menu.h"
+#include "mmwidget/bm_button.h"
 
 // ?IsModemDialin@@YA_NXZ
 ARTS_IMPORT /*static*/ bool IsModemDialin();
@@ -55,6 +60,11 @@ mmInterface::mmInterface()
     *reinterpret_cast<void**>(this) = saved_vtable;
 
     ActivateNode();
+
+    // Initialize ARTS_IMPORT globals to nullptr to avoid deleting sentinel values
+    // from the game binary on early-exit cleanup paths
+    CityListPtr = nullptr;
+    VehicleListPtr = nullptr;
 }
 
 mmInterface::~mmInterface()
@@ -225,10 +235,6 @@ void mmInterface::ShowMain(i32 /*arg1*/)
 
 void mmInterface::Update()
 {
-    static int dbg_fd = -1;
-    if (dbg_fd < 0) dbg_fd = open("/tmp/opencode/interface_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
-    write(dbg_fd, "DBG mmInterface::Update\n", 24);
-
     if (MenuMgr())
     {
         MenuMgr()->CheckInput();
@@ -238,6 +244,7 @@ void mmInterface::Update()
         {
             if (menu->GetState() == 4)
             {
+                UIBMButton::PlayClickSound();
                 i32 widget_id = menu->GetWidgetID();
                 menu->ClearAction();
 
@@ -260,6 +267,23 @@ void mmInterface::Update()
                         case IDC_MAIN_MENU_RECORDS:
                             // TODO: Show records dialog
                             break;
+                        case IDC_MAIN_MENU_OPTIONS:
+                            MenuMgr()->Switch(IDM_OPTIONS);
+                            break;
+                        case IDC_MAIN_MENU_HELP:
+                            // TODO: Show help dialog
+                            break;
+                        case IDC_MAIN_MENU_MINIMIZE:
+                            if (g_MainWindow)
+                                SDL_MinimizeWindow(g_MainWindow);
+                            break;
+                        case IDC_MAIN_MENU_CLOSE:
+                        {
+                            SDL_Event quit_event;
+                            quit_event.type = SDL_EVENT_QUIT;
+                            SDL_PushEvent(&quit_event);
+                            break;
+                        }
                     }
                 }
             }

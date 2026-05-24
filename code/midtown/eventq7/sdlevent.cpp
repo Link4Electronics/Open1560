@@ -24,8 +24,11 @@
 #include "mmaudio/manager.h"
 #include "pcwindis/dxinit.h"
 
+#include "agi/pipeline.h"
+
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_hints.h>
+#include <SDL3/SDL_video.h>
 
 #include "core/minwin.h"
 
@@ -48,20 +51,22 @@ static mem::cmd_param PARAM_mousemode {"mousemode"};
 
 i32 SDLEventHandler::BeginGfx(i32 width, i32 height, b32 fullscreen)
 {
-    center_x_ = width / 2.0f;
-    center_y_ = height / 2.0f;
+    center_x_ = 320.0f;
+    center_y_ = 240.0f;
 
-    scale_x_ = 1.0f / center_x_;
-    scale_y_ = 1.0f / center_y_;
+    scale_x_ = 1.0f / 320.0f;
+    scale_y_ = 1.0f / 240.0f;
 
-    mouse_x_ = width / 2;
-    mouse_y_ = height / 2;
+    mouse_x_ = 320;
+    mouse_y_ = 240;
 
     mouse_virtual_x_ = 0;
     mouse_virtual_y_ = 0;
 
-    mouse_width_ = width;
-    mouse_height_ = height;
+    mouse_width_ = 640;
+    mouse_height_ = 480;
+
+    flip_mouse_y_ = false;
 
     tracking_x_ = 0;
     tracking_y_ = 0;
@@ -185,19 +190,23 @@ void SDLEventHandler::HandleEvent(const SDL_Event& event)
             mouse_virtual_x_ += static_cast<i32>(event.motion.xrel);
             mouse_virtual_y_ += static_cast<i32>(event.motion.yrel);
 
-            if (tracked_events_ & 0x1)
+            // Convert window-space mouse to game-space (640x480) coordinates
+            if (g_ViewportWidth > 0 && g_ViewportHeight > 0)
             {
-                mouse_x_ = std::clamp(static_cast<i32>(event.motion.x) - tracking_x_, 0, mouse_width_);
-                mouse_y_ = std::clamp(static_cast<i32>(event.motion.y) - tracking_y_, 0, mouse_height_);
-
-                tracking_x_ = static_cast<i32>(event.motion.x) - mouse_x_;
-                tracking_y_ = static_cast<i32>(event.motion.y) - mouse_y_;
+                mouse_x_ = std::clamp(
+                    static_cast<i32>((event.motion.x - g_ViewportX) * 640.0f / g_ViewportWidth), 0, 640);
+                mouse_y_ = std::clamp(
+                    static_cast<i32>((event.motion.y - g_ViewportY) * 480.0f / g_ViewportHeight), 0, 480);
             }
             else
             {
-                mouse_x_ = std::clamp(mouse_x_ + static_cast<i32>(event.motion.xrel), 0, mouse_width_);
-                mouse_y_ = std::clamp(mouse_y_ + static_cast<i32>(event.motion.yrel), 0, mouse_height_);
+                mouse_x_ = std::clamp(static_cast<i32>(event.motion.x), 0, mouse_width_);
+                mouse_y_ = std::clamp(static_cast<i32>(event.motion.y), 0, mouse_height_);
             }
+
+            // Wayland: flip Y to match rendering projection
+            if (flip_mouse_y_)
+                mouse_y_ = 480 - mouse_y_;
 
             // Avoid redudant events, and only send a maximum of one per frame
             if (mouse_x_ != old_x || mouse_y_ != old_y)

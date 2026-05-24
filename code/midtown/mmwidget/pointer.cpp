@@ -24,7 +24,9 @@ define_dummy_symbol(mmwidget_pointer);
 #include "agi/pipeline.h"
 #include "arts7/cullmgr.h"
 #include "eventq7/event.h"
-#include "pcwindis/dxinit.h"
+
+#include <fcntl.h>
+#include <unistd.h>
 
 sfPointer::sfPointer()
 {
@@ -55,9 +57,11 @@ void sfPointer::Update()
 
     if (eqEventHandler::SuperQ)
     {
-        CurrentPos.x = static_cast<f32>(eqEventHandler::SuperQ->GetMouseX());
-        // On Wayland/EGL the framebuffer is Y-down, so flip to match screen coords
-        CurrentPos.y = Pipe()->GetHeight() - static_cast<f32>(eqEventHandler::SuperQ->GetMouseY());
+        f32 mouse_x = eqEventHandler::SuperQ->GetMouseX();
+        f32 mouse_y = eqEventHandler::SuperQ->GetMouseY();
+
+        CurrentPos.x = std::clamp(mouse_x * static_cast<f32>(Pipe()->GetWidth()) / 640.0f, 0.0f, static_cast<f32>(Pipe()->GetWidth() - 1));
+        CurrentPos.y = std::clamp(mouse_y * static_cast<f32>(Pipe()->GetHeight()) / 480.0f, 0.0f, static_cast<f32>(Pipe()->GetHeight() - 1));
     }
 
     if (CursorTexture)

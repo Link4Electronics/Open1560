@@ -28,6 +28,9 @@ define_dummy_symbol(mmwidget_menu);
 
 #include "manager.h"
 #include "textfield.h"
+
+// Override weak default (game_stubs.cpp provides 0.0f)
+f32 UIMenu::UI_LEFT_MARGIN = 0.0f;
 #include "widget.h"
 
 #include "eventq7/event.h"
@@ -89,40 +92,32 @@ void UIMenu::BackUp()
 
 void UIMenu::CheckInput()
 {
-    static int dbg_fd = -1;
-    if (dbg_fd < 0) dbg_fd = open("/tmp/opencode/menu_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
-    write(dbg_fd, "DBG UIMenu::CheckInput\n", 23);
-
     // Ignore any events while midgets are open
     if (MIDGETSPTR->IsOpen())
     {
-        write(dbg_fd, "DBG MIDGETS open, clearing\n", 27);
         MenuMgr()->GetEventQ()->Clear();
         return;
     }
 
     eqEvent event;
 
-    int pop_count = 0;
     while (MenuMgr()->GetEventQ()->Pop(&event))
     {
-        ++pop_count;
-        char buf[64];
-        int n = snprintf(buf, sizeof(buf), "DBG pop event type=%d\n", (int)event.Type);
-        write(dbg_fd, buf, n);
-
         if (event.Type != eqEventType::Keyboard)
         {
             if (event.Type == eqEventType::Mouse)
             {
-                write(dbg_fd, "DBG mouse event\n", 16);
                 MenuMgr()->ToggleWidgetSnapping(false);
 
                 eqMouseEvent& mev = event.Mouse;
                 if (mev.ChangedButtons & mev.NewButtons)
                 {
-                    f32 x = static_cast<f32>(mev.MouseX) / (eqEventHandler::SuperQ->GetCenterX() * 2.0f);
-                    f32 y = static_cast<f32>(mev.MouseY) / (eqEventHandler::SuperQ->GetCenterY() * 2.0f);
+                    // Use game-space mouse position from event handler
+                    f32 game_x = eqEventHandler::SuperQ->GetMouseX();
+                    f32 game_y = eqEventHandler::SuperQ->GetMouseY();
+
+                f32 x = game_x / (eqEventHandler::SuperQ->GetCenterX() * 2.0f);
+                f32 y = game_y / (eqEventHandler::SuperQ->GetCenterY() * 2.0f);
 
                     x = (x - menu_x_) / menu_width_;
                     y = (y - menu_y_) / menu_height_;
@@ -208,29 +203,18 @@ void UIMenu::CheckMouseHits()
     if (MenuMgr()->Is3D())
         return;
 
-    static int dbg_fd = -1;
-    if (dbg_fd < 0) dbg_fd = open("/tmp/opencode/mouse_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
-
-    f32 mouse_x = eqEventHandler::SuperQ->GetMouseX();
-    f32 mouse_y = eqEventHandler::SuperQ->GetMouseY();
+    // Use game-space mouse position from event handler
+    f32 game_x = eqEventHandler::SuperQ->GetMouseX();
+    f32 game_y = eqEventHandler::SuperQ->GetMouseY();
 
     f32 center_x = eqEventHandler::SuperQ->GetCenterX();
     f32 center_y = eqEventHandler::SuperQ->GetCenterY();
 
-    f32 x = mouse_x / (center_x * 2.0f);
-    f32 y = mouse_y / (center_y * 2.0f);
-
-    char buf[256];
-    int n = snprintf(buf, sizeof(buf), "DBG mouse=%.0f,%.0f center=%.0f,%.0f norm=%.4f,%.4f\n",
-        mouse_x, mouse_y, center_x, center_y, x, y);
-    write(dbg_fd, buf, n);
+    f32 x = game_x / (center_x * 2.0f);
+    f32 y = game_y / (center_y * 2.0f);
 
     x = (x - menu_x_) / menu_width_;
     y = (y - menu_y_) / menu_height_;
-
-    n = snprintf(buf, sizeof(buf), "DBG menu=%.4f,%.4f menu_xywh=%.4f,%.4f,%.4f,%.4f\n",
-        x, y, menu_x_, menu_y_, menu_width_, menu_height_);
-    write(dbg_fd, buf, n);
 
     i32 hovered = -1;
 
@@ -246,10 +230,6 @@ void UIMenu::CheckMouseHits()
             if (x >= widget->MinX && x <= widget->MaxX && y >= widget->MinY && y <= widget->MaxY)
             {
                 hovered = i;
-                char buf2[128];
-                int n2 = snprintf(buf2, sizeof(buf2), "DBG HOVER i=%d min=%.4f,%.4f max=%.4f,%.4f\n",
-                    i, widget->MinX, widget->MinY, widget->MaxX, widget->MaxY);
-                write(dbg_fd, buf2, n2);
                 break;
             }
         }
@@ -588,11 +568,24 @@ void UIMenu::SetBstate(i32 index)
     }
 }
 
+uiWidget* UIMenu::AddHotSpot(i32 arg1, aconst char* arg2, f32 arg3, f32 arg4, f32 arg5, f32 arg6, Callback arg7)
+{
+    ScaleWidget(arg3, arg4, arg5, arg6);
+
+    Ptr<uiWidget> widget = arnew uiWidget();
+    AddWidget(widget.get(), arg2, arg3, arg4, arg5, arg6, arg1, nullptr);
+    widget->Switch(true);
+    return widget.release();
+}
+
 UIBMButton* UIMenu::AddBMButton(i32 idc, aconst char* name, f32 x, f32 y, i32 type, Callback cb_1, i32* arg7,
     i32 arg8, i32 arg9, Callback arg10)
 {
     Ptr<UIBMButton> button = arnew UIBMButton();
     button->Init(const_cast<char*>(name), x, y, type, 0, arg7, arg8, arg9, nullptr, cb_1, arg10);
+    // Scale down button to 80% of default size
+    button->Width *= 0.8f;
+    button->Height *= 0.8f;
     AddWidget(button.get(), name, x, y, button->Width, button->Height, idc, nullptr);
     return button.release();
 }

@@ -20,5 +20,52 @@ define_dummy_symbol(mmui_driver);
 
 #include "driver.h"
 
+#include "agi/pipeline.h"
+#include "localize/localize.h"
+
+DriverMenu::DriverMenu(i32 arg1)
+    : UIMenu(arg1)
+{
+    SetBstate(0);
+}
+
+DriverMenu::~DriverMenu() = default;
+
+void DriverMenu::AddPlayer(char* /*arg1*/)
+{}
+
+void DriverMenu::DeleteCB()
+{}
+
+void DriverMenu::DisplayDriverInfo(char* /*arg1*/, char* /*arg2*/, char* /*arg3*/, char* /*arg4*/, char* /*arg5*/,
+    i32 /*arg6*/)
+{}
+
+void DriverMenu::InitPlayerSelection()
+{}
+
 void DriverMenu::NewPlayer()
+{}
+
+void DriverMenu::PreSetup()
+{
+    UIMenu::PreSetup();
+}
+
+void DriverMenu::RemoveAllPlayers()
+{}
+
+void DriverMenu::RemovePlayer(char* /*arg1*/)
+{}
+
+void DriverMenu::SetController(char* /*arg1*/)
+{}
+
+void DriverMenu::SetNetName(char* /*arg1*/)
+{}
+
+void DriverMenu::SetPlayerPick(i32 /*arg1*/)
+{}
+
+void DriverMenu::TDPickCB()
 {}

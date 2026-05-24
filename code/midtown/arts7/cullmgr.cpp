@@ -305,20 +305,11 @@ void asCullManager::Update()
 
     PGRAPH->Update();
 
-    write(2, "DBG CullMgr::Update\n", 20);
-
-    {
-        char buf[128];
-        int len = snprintf(buf, sizeof(buf), "DBG CullMgr: num_cameras_=%d, IsAppActive=%d\n", num_cameras_, IsAppActive());
-        write(2, buf, len);
-    }
-
     Timer update_timer;
     float update_3D = 0.0f;
 
     if (num_cameras_ && IsAppActive())
     {
-        write(2, "DBG CullMgr: entering camera loop\n", 34);
         Pipe()->BeginFrame();
 
         if (!num_cameras_ || !cameras_[0]->GetUnderlayBitmap() || cameras_[0]->GetUnderlayBitmap()->Is3D())

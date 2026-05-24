@@ -175,17 +175,6 @@ b32 asNode::AddChild(asNode* child)
     child->parent_node_ = this;
     child->next_node_ = nullptr;
 
-    const char* pname = GetNodeName();
-    if (!pname) pname = "(null)";
-    const char* cname = child->GetNodeName();
-    if (!cname) cname = "(null)";
-    write(2, "DBG AddChild: parent=", 21);
-    write(2, pname, __builtin_strlen(pname));
-    write(2, " child=", 7);
-    write(2, cname, __builtin_strlen(cname));
-    write(2, "\n", 1);
-    DBG_NODE("DBG AddChild\n");
-
     asNode** last = &child_node_;
 
     while (*last)

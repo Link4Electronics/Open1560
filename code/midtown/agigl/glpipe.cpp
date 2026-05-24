@@ -33,8 +33,6 @@
 #include "pcwindis/setupdata.h"
 
 #include "glbitmap.h"
-
-#include <unistd.h>
 #include "glcontext.h"
 #include "glrsys.h"
 #include "gltexdef.h"
@@ -328,8 +326,6 @@ void agiGLPipeline::BeginFrame()
 
 void agiGLPipeline::BeginScene()
 {
-    write(2, "DBG GL BeginScene\n", 18);
-
     ARTS_UTIMED(agiBeginScene);
 
     UpdateZTrick();
@@ -338,16 +334,11 @@ void agiGLPipeline::BeginScene()
     agiLighter::BeginScene();
 
     agiRenderer* raw = renderer_.get();
-    write(2, "DBG GL before BeginGroup\n", 25);
 
     in_scene_ = true;
 
     if (raw)
         raw->BeginGroup();
-    else
-        write(2, "DBG GL renderer_ is null!\n", 26);
-
-    write(2, "DBG GL after BeginGroup\n", 24);
 }
 
 void agiGLPipeline::EndScene()
@@ -460,12 +451,26 @@ void agiGLPipeline::CopyBitmap(i32 dst_x, i32 dst_y, agiBitmap* src, i32 src_x, 
     verts[3].x = verts[0].x = static_cast<f32>(dst_x);
     verts[1].y = verts[0].y = static_cast<f32>(dst_y);
     verts[3].tu = verts[0].tu = static_cast<f32>(src_x) / static_cast<f32>(src->GetWidth());
-    verts[1].tv = verts[0].tv = static_cast<f32>(src_y) / static_cast<f32>(src->GetHeight());
+    f32 tv_low = static_cast<f32>(src_y) / static_cast<f32>(src->GetHeight());
+    f32 tv_high = static_cast<f32>(src_y + height) / static_cast<f32>(src->GetHeight());
 
+    {
+        static i32 is_wayland = -1;
+        if (is_wayland < 0)
+        {
+            const char* vd = SDL_GetCurrentVideoDriver();
+            is_wayland = (vd && strcmp(vd, "wayland") == 0) ? 1 : 0;
+        }
+
+        if (is_wayland)
+            std::swap(tv_low, tv_high);
+    }
+
+    verts[1].tv = verts[0].tv = tv_low;
     verts[1].x = verts[2].x = static_cast<f32>(dst_x + width);
     verts[3].y = verts[2].y = static_cast<f32>(dst_y + height);
     verts[1].tu = verts[2].tu = static_cast<f32>(src_x + width) / static_cast<f32>(src->GetWidth());
-    verts[3].tv = verts[2].tv = static_cast<f32>(src_y + height) / static_cast<f32>(src->GetHeight());
+    verts[3].tv = verts[2].tv = tv_high;
 
     rasterizer_->Mesh(agiVtxType::Screen, (agiVtx*) verts, 4, indices, 6);
 
@@ -515,12 +520,27 @@ void agiGLPipeline::StretchCopyBitmap(
     verts[3].x = verts[0].x = static_cast<f32>(dst_x);
     verts[1].y = verts[0].y = static_cast<f32>(dst_y);
     verts[3].tu = verts[0].tu = static_cast<f32>(src_x) * inv_tex_w;
-    verts[1].tv = verts[0].tv = static_cast<f32>(src_y) * inv_tex_h;
 
-    verts[1].x = verts[2].x = static_cast<f32>(dst_x + dst_w);
-    verts[3].y = verts[2].y = static_cast<f32>(dst_y + dst_h);
-    verts[1].tu = verts[2].tu = static_cast<f32>(src_x + src_w) * inv_tex_w;
-    verts[3].tv = verts[2].tv = static_cast<f32>(src_y + src_h) * inv_tex_h;
+    {
+        static i32 is_wayland = -1;
+        if (is_wayland < 0)
+        {
+            const char* vd = SDL_GetCurrentVideoDriver();
+            is_wayland = (vd && strcmp(vd, "wayland") == 0) ? 1 : 0;
+        }
+
+        f32 tv_low = static_cast<f32>(src_y) * inv_tex_h;
+        f32 tv_high = static_cast<f32>(src_y + src_h) * inv_tex_h;
+
+        if (is_wayland)
+            std::swap(tv_low, tv_high);
+
+        verts[1].tv = verts[0].tv = tv_low;
+        verts[1].x = verts[2].x = static_cast<f32>(dst_x + dst_w);
+        verts[3].y = verts[2].y = static_cast<f32>(dst_y + dst_h);
+        verts[1].tu = verts[2].tu = static_cast<f32>(src_x + src_w) * inv_tex_w;
+        verts[3].tv = verts[2].tv = tv_high;
+    }
 
     rasterizer_->Mesh(agiVtxType::Screen, (agiVtx*) verts, 4, indices, 6);
 

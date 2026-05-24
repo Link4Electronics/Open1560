@@ -23,10 +23,6 @@ define_dummy_symbol(midtown);
 #include <fcntl.h>
 #include <unistd.h>
 
-static int dbg_fd = -1;
-static void dbg_open() { if (dbg_fd < 0) dbg_fd = open("/tmp/opencode/midtown_debug.log", O_WRONLY|O_CREAT|O_TRUNC, 0644); }
-#define DBG_MSG(msg) do { dbg_open(); write(dbg_fd, msg, sizeof(msg) - 1); } while(0)
-
 #include "agi/bitmap.h"
 #include "agi/physlib.h"
 #include "agi/pipeline.h"
@@ -59,7 +55,9 @@ static void dbg_open() { if (dbg_fd < 0) dbg_fd = open("/tmp/opencode/midtown_de
 #include "mminput/input.h"
 #include "mmphysics/phys.h"
 #include "mmui/graphics.h"
+#include "mmui/driver.h"
 #include "mmui/main.h"
+#include "mmui/options.h"
 #include "mmwidget/manager.h"
 #include "pcwindis/dxinit.h"
 #include "pcwindis/dxsetup.h"
@@ -356,13 +354,10 @@ static b32 GenerateLoadScreenName()
 static void GameLoop([[maybe_unused]] mmInterface* mm_interface, [[maybe_unused]] mmGameManager* game_manager,
     [[maybe_unused]] char* replay_name)
 {
-    DBG_MSG("DBG midtown: GameLoop entered\n");
     ARTS_EXCEPTION_BEGIN
     {
-        DBG_MSG("DBG midtown: GameLoop exception handler set\n");
         while (MMSTATE.GameState == mmGameState::Running)
         {
-            DBG_MSG("DBG midtown: GameLoop iteration\n");
 #ifdef ARTS_DEV_BUILD
             if (CycleTest && Sim()->GetElapsed() > CycleTime)
             {
@@ -417,20 +412,9 @@ static void GameLoop([[maybe_unused]] mmInterface* mm_interface, [[maybe_unused]
     }
     ARTS_EXCEPTION_END
     {
-        Displayf("CRASH POSITION = (%f, %f, %f)", PlayerPos.x, PlayerPos.y, PlayerPos.z);
-
-        AIMAP.Dump();
-
-#ifdef ARTS_DEV_BUILD
-        if (game_manager && !replay_name)
-        {
-            game_manager->SaveReplay("crash.rpl"_xconst);
-
-            Abortf("Exception caught during simulate loop, saving replay.");
-        }
-#endif
-
-        Abortf("Exception caught during simulate loop.");
+        // NOTE: With -fno-exceptions this block always runs after the loop.
+        // On Windows (SEH __try/__except), it only runs on exceptions.
+        Displayf("Game loop finished (GameState=%d)", (int)MMSTATE.GameState);
     }
 }
 
@@ -568,21 +552,24 @@ static void MainPhase(i32 argc, char** argv)
                 }
 
                 mm_interface = arnew mmInterface();
-                DBG_MSG("DBG midtown: after mmInterface ctor\n");
-
                 // Create menu system
                 MenuManager::Instance = new MenuManager();
-                DBG_MSG("DBG midtown: after MenuManager ctor\n");
 
                 mm_interface->MenuMain = new MainMenu(IDM_MAIN);
-                DBG_MSG("DBG midtown: after MainMenu ctor\n");
                 MenuManager::Instance->AddMenu2(mm_interface->MenuMain);
-                DBG_MSG("DBG midtown: after AddMenu2\n");
+
+                mm_interface->MenuDriver = new DriverMenu(IDM_DRIVER);
+                mm_interface->MenuDriver->AssignBackground("driv_back");
+                mm_interface->MenuDriver->DeactivateNode();
+                MenuManager::Instance->AddMenu2(mm_interface->MenuDriver);
+
+                mm_interface->MenuOptions = new OptionsMenu(IDM_OPTIONS);
+                mm_interface->MenuOptions->DeactivateNode();
+                MenuManager::Instance->AddMenu2(mm_interface->MenuOptions);
+
                 Sim()->AdoptChild(Ptr<asNode>(MenuManager::Instance));
-                DBG_MSG("DBG midtown: after AdoptChild MenuManager\n");
 
                 Sim()->AddChild(mm_interface.get());
-                DBG_MSG("DBG midtown: after AddChild mmInterface\n");
 
                 mm_interface->SetNavigationOrders();
                 mm_interface->Reset();
@@ -641,42 +628,31 @@ static void MainPhase(i32 argc, char** argv)
             default: Quitf("Invalid GameState %i", MMSTATE.GameState);
         }
 
-        DBG_MSG("DBG midtown: before ResChange\n");
         Sim()->ResChange(Pipe()->GetWidth(), Pipe()->GetHeight());
-        DBG_MSG("DBG midtown: after ResChange\n");
 
         loader.EndTask();
-        DBG_MSG("DBG midtown: after loader.EndTask\n");
 
         // Show main menu now that loading is complete
         if (mm_interface)
         {
-            DBG_MSG("DBG midtown: before ShowMain\n");
             mm_interface->ShowMain(1);
-            DBG_MSG("DBG midtown: after ShowMain\n");
         }
     }
 
-    DBG_MSG("DBG midtown: before Setting GameState\n");
     MMSTATE.GameState = mmGameState::Running;
     MMSTATE.Shutdown = false;
-    DBG_MSG("DBG midtown: after Setting GameState\n");
 
     ALLOCATOR.SanityCheck();
-    DBG_MSG("DBG midtown: after SanityCheck\n");
 
     module_init.End();
     Displayf("********* Load time = %f seconds; %dK allocated.", LoadTimer.Time(), ALLOCATOR.GetHeapUsed() >> 10);
-    DBG_MSG("DBG midtown: after Displayf\n");
 
     if (PARAM_allocstats)
     {
         ALLOCATOR.DumpStats();
     }
 
-    DBG_MSG("DBG midtown: before GameLoop\n");
     GameLoop(mm_interface.get(), game_manager.get(), replay_name);
-    DBG_MSG("DBG midtown: after GameLoop\n");
 
 #ifdef ARTS_DEV_BUILD
     if (game_manager)

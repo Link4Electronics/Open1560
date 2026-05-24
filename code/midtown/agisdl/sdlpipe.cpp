@@ -19,6 +19,7 @@
 #include "sdlpipe.h"
 
 #include "agi/error.h"
+#include "agi/pipeline.h"
 #include "pcwindis/dxinit.h"
 #include "pcwindis/setupdata.h"
 
@@ -59,6 +60,9 @@ i32 agiSDLPipeline::BeginGfx()
 
 void agiSDLPipeline::InitScaling()
 {
+    g_WindowWidth = horz_res_;
+    g_WindowHeight = vert_res_;
+
     switch (i32 scaling_mode = PARAM_scaling.get_or(0))
     {
         case 0: // Stretched, Keep Aspect
@@ -104,4 +108,9 @@ void agiSDLPipeline::InitScaling()
 
     blit_x_ = (horz_res_ - blit_width_) / 2;
     blit_y_ = (vert_res_ - blit_height_) / 2;
+
+    g_ViewportX = blit_x_;
+    g_ViewportY = blit_y_;
+    g_ViewportWidth = blit_width_;
+    g_ViewportHeight = blit_height_;
 }

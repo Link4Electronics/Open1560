@@ -103,6 +103,9 @@ public:
     // ?PlaySound@UIBMButton@@AAEXXZ
     ARTS_IMPORT void PlaySound();
 
+    // ?PlayClickSound@UIBMButton@@CAXXZ
+    ARTS_IMPORT static void PlayClickSound();
+
     // ?AllocateSounds@UIBMButton@@CAXXZ
     ARTS_IMPORT static void AllocateSounds();
 

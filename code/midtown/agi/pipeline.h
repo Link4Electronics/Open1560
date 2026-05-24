@@ -476,6 +476,16 @@ extern i32 UI_YPos;
 extern i32 UI_Width;
 extern i32 UI_Height;
 
+// Window-space render viewport (actual blit coordinates)
+extern i32 g_ViewportX;
+extern i32 g_ViewportY;
+extern i32 g_ViewportWidth;
+extern i32 g_ViewportHeight;
+
+// Full window dimensions (for UI full-window viewport)
+extern i32 g_WindowWidth;
+extern i32 g_WindowHeight;
+
 extern f32 UI_StartX;
 extern f32 UI_StartY;
 

@@ -113,6 +113,14 @@ i32 UI_YPos = 0;
 i32 UI_Width = 0;
 i32 UI_Height = 0;
 
+i32 g_ViewportX = 0;
+i32 g_ViewportY = 0;
+i32 g_ViewportWidth = 0;
+i32 g_ViewportHeight = 0;
+
+i32 g_WindowWidth = 0;
+i32 g_WindowHeight = 0;
+
 f32 UI_StartX = 0.0f;
 f32 UI_StartY = 0.0f;
 
