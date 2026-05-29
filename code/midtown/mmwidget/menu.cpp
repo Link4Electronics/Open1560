@@ -512,6 +512,26 @@ void UIMenu::DisableIME()
     }
 }
 
+void UIMenu::SetFocusWidget(i32 arg1)
+{
+    focus_widget_index_ = arg1;
+
+    if (arg1 >= 0 && arg1 < widget_count_)
+    {
+        *p_b_state_ = arg1;
+        GetWidget(arg1)->Switch(true);
+    }
+}
+
+void UIMenu::SetSelected()
+{
+    if (uiWidget* widget = GetActiveWidget())
+    {
+        widget->Active = true;
+        widget->MouseHit = 1;
+    }
+}
+
 void UIMenu::Enable()
 {
     ActivateNode();

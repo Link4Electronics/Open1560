@@ -45,6 +45,33 @@ define_dummy_symbol(mmwidget_manager);
 
 Vector4& MenuManager::GetFGColor(i32) { static Vector4 white{1,1,1,1}; return white; } // ARTS_IMPORT stub
 
+void* MenuManager::GetFont(i32 size)
+{
+    void** font_ptr = nullptr;
+
+    switch (size)
+    {
+        case 12: font_ptr = &font_size_12_; break;
+        case 14: font_ptr = &font_size_14_; break;
+        case 16: font_ptr = &font_size_16_; break;
+        case 20: font_ptr = &font_size_20_; break;
+        case 24: font_ptr = &font_size_24_; break;
+        case 32: font_ptr = &font_size_32_; break;
+        case 48: font_ptr = &font_size_48_; break;
+        case 64: font_ptr = &font_size_64_; break;
+    }
+
+    if (font_ptr)
+    {
+        if (!*font_ptr)
+            *font_ptr = mmText::CreateFont("Gill Sans MT", size);
+
+        return *font_ptr;
+    }
+
+    return nullptr;
+}
+
 MenuManager::~MenuManager()
 {
 }
