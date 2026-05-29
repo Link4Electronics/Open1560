@@ -472,7 +472,25 @@ static void MainPhase(i32 argc, char** argv)
         // so we can use a temporary SDL renderer without conflicting with GL
         if (MMSTATE.GameState == mmGameState::Menus)
         {
-            PlayIntroVideo(g_MainWindow, "game/logos.avi");
+            const char* probe_paths[] = {
+                "game/logos.avi",
+                "logos.avi",
+            };
+
+            bool played = false;
+
+            for (const char* path : probe_paths)
+            {
+                if (!access(path, F_OK))
+                {
+                    PlayIntroVideo(g_MainWindow, path);
+                    played = true;
+                    break;
+                }
+            }
+
+            if (!played)
+                Displayf("Intro video not found (tried: game/logos.avi, logos.avi)");
         }
 
         if (InitPipeline(APPTITLE, argc, argv))

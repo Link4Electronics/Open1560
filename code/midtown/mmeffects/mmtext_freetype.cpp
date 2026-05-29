@@ -30,6 +30,7 @@
 #include "midtown.h"
 #include "stream/stream.h"
 
+#include <cctype>
 #include <unordered_map>
 #include <vector>
 
@@ -472,27 +473,72 @@ mmFont* mmFont::Create(const char* font_name, i32 height, i32 weight)
     // TODO: Support other fonts (Broadway, used by mmCDPlayer via mmHUD mmNumberFont)
     // TODO: Lookup file name for font
 
-    CStringBuffer<256> font_path;
-    font_path.append("FONT/");
+    const char* ttf_name = nullptr;
 
     if (!std::strcmp(font_name, "Broadway"))
     {
-        font_path.append("BROADW.TTF");
+        ttf_name = "BROADW.TTF";
     }
     else if (!std::strcmp(font_name, "Gill Sans MT"))
     {
-        if (weight >= 700)
-            font_path.append("GILB____.TTF");
-        else
-            font_path.append("GIL_____.TTF");
+        ttf_name = (weight >= 700) ? "GILB____.TTF" : "GIL_____.TTF";
+    }
+    else if (!std::strcmp(font_name, "Comic Sans MS"))
+    {
+        ttf_name = (weight >= 700) ? "COMICBD.TTF" : "COMIC.TTF";
     }
     else
     {
-        // Unknown font (hope for the best)
-        font_path.assign("C:\\WINDOWS\\FONTS\\VERDANA.TTF");
+        // Unknown font - fall back to Gill Sans
+        ttf_name = "GIL_____.TTF";
     }
 
-    Ptr<Stream> file = as_ptr arts_fopen(font_path, "r");
+    Ptr<Stream> file = nullptr;
+
+    // Try VFS (archives) and host filesystem paths
+    auto try_font = [&](const char* dir, const char* name) -> bool
+    {
+        CStringBuffer<256> path;
+        path.append(dir);
+        path.append(name);
+        file = as_ptr arts_fopen(path, "r");
+        return file != nullptr;
+    };
+
+    const char* search_dirs[] = {"FONT/", "fonts/"};
+
+    for (const char* dir : search_dirs)
+    {
+        if (try_font(dir, ttf_name))
+            break;
+
+        char lower[256];
+        usize len = std::strlen(ttf_name);
+        for (usize i = 0; i < len && i < sizeof(lower) - 1; ++i)
+            lower[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(ttf_name[i])));
+        lower[len] = '\0';
+
+        if (try_font(dir, lower))
+            break;
+    }
+
+    // Last resort: try system fonts
+    if (file == nullptr)
+    {
+        const char* system_fonts[] = {
+            "/usr/share/fonts/truetype/msttcorefonts/arial.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans.ttf",
+            "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+        };
+
+        for (const char* sys_path : system_fonts)
+        {
+            file = as_ptr arts_fopen(sys_path, "r");
+            if (file)
+                break;
+        }
+    }
 
     if (file == nullptr)
     {
