@@ -29,9 +29,13 @@ struct mmPlayerInfo;
 struct NETSESSION_DESC;
 
 class AboutMenu;
+class AboutOptionMenu;
+class AudioOptionMenu;
 class AudioOptions;
+class ControlOptionMenu;
 class ControlSetup;
 class CRSettings;
+class GraphicsOptionMenu;
 class Dialog_City;
 class Dialog_ControlAssign;
 class Dialog_DriverRec;
@@ -129,6 +133,10 @@ public:
     NetSelectMenu* MenuNetSelect;
     AboutMenu* MenuAbout;
     OptionsMenu* MenuOptions;
+    AudioOptionMenu* MenuAudioOpt;
+    GraphicsOptionMenu* MenuGraphicsOpt;
+    ControlOptionMenu* MenuControlOpt;
+    AboutOptionMenu* MenuAboutOpt;
     GraphicsOptions* MenuGraphicsOptions;
     AudioOptions* MenuAudioOptions;
     ControlSetup* MenuControlSetup;

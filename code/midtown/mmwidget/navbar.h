@@ -20,43 +20,39 @@
 
 #include "menu.h"
 
+class UIBMButton;
+
+enum
+{
+    IDC_NAV_OPT = 0x64,
+    IDC_NAV_STOW = 0x65,
+    IDC_NAV_HELP = 0x66,
+    IDC_NAV_EXIT = 0x67,
+    IDC_NAV_PREV = 0x68,
+};
+
 class uiNavBar final : public UIMenu
 {
 public:
-    // ??0uiNavBar@@QAE@H@Z
-    ARTS_IMPORT uiNavBar(i32 arg1);
+    uiNavBar();
 
-    // ??1uiNavBar@@UAE@XZ
-    ARTS_EXPORT ~uiNavBar() override = default;
+    ~uiNavBar() override = default;
 
-    // ?BackUp@uiNavBar@@UAEXXZ | inline
-    ARTS_EXPORT void BackUp() override;
+    void BackUp() override;
 
-    // ?Help@uiNavBar@@QAEXXZ
-    ARTS_IMPORT void Help();
+    void Help();
+    void Minimize();
+    void OptionActive();
+    void OptionInActive();
+    void SetPrevPos(f32 x, f32 y);
+    void TurnOffPrev();
+    void TurnOnPrev();
+    void Update() override;
 
-    // ?Minimize@uiNavBar@@QAEXXZ
-    ARTS_IMPORT void Minimize();
-
-    // ?OptionActive@uiNavBar@@QAEXXZ
-    ARTS_IMPORT void OptionActive();
-
-    // ?OptionInActive@uiNavBar@@QAEXXZ
-    ARTS_IMPORT void OptionInActive();
-
-    // ?SetPrevPos@uiNavBar@@QAEXMM@Z
-    ARTS_IMPORT void SetPrevPos(f32 arg1, f32 arg2);
-
-    // ?TurnOffPrev@uiNavBar@@QAEXXZ
-    ARTS_IMPORT void TurnOffPrev();
-
-    // ?TurnOnPrev@uiNavBar@@QAEXXZ
-    ARTS_IMPORT void TurnOnPrev();
-
-    // ?Update@uiNavBar@@UAEXXZ
-    ARTS_IMPORT void Update() override;
-
-    u8 gap90[0x30];
+    UIBMButton* mnav_opt_btn_ {nullptr};
+    UIBMButton* mnav_prev_btn_ {nullptr};
+    f32 previous_x_ {0.0f};
+    f32 previous_y_ {0.0f};
+    b32 prev_off_ {0};
+    b32 option_active_ {0};
 };
-
-check_size(uiNavBar, 0xC0);

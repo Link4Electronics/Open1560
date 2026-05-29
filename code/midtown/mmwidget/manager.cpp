@@ -34,6 +34,13 @@ define_dummy_symbol(mmwidget_manager);
 #include <unistd.h>
 #include <fcntl.h>
 
+#include <SDL3/SDL_audio.h>
+#include <SDL3/SDL_init.h>
+
+#include "stream/fsystem.h"
+#include "stream/stream.h"
+
+#include "bm_button.h"
 #include "menu.h"
 #include "mstore.h"
 #include "navbar.h"
@@ -44,6 +51,108 @@ define_dummy_symbol(mmwidget_manager);
 #include "vector7/vector4.h"
 
 Vector4& MenuManager::GetFGColor(i32) { static Vector4 white{1,1,1,1}; return white; } // ARTS_IMPORT stub
+
+static SDL_AudioStream* g_UIOptionsStream = nullptr;
+static u8* g_UIOptionsData = nullptr;
+static int g_UIOptionsLen = 0;
+
+static void PlayOptionsSoundNow()
+{
+    if (!g_UIOptionsStream)
+    {
+        if (!SDL_InitSubSystem(SDL_INIT_AUDIO))
+            return;
+
+        const char* paths[] = {
+            "AUD/AUD22/UIOPTIONS.22K.WAV",
+            "AUD/AUD11/UIOPTIONS.11K.WAV",
+        };
+
+        for (const char* vfs_path : paths)
+        {
+            Ptr<Stream> stream = as_ptr FileSystem::OpenAny(vfs_path, true, nullptr, 4096);
+            if (!stream)
+                continue;
+
+            i32 file_size = stream->Size();
+            if (file_size <= 0)
+                continue;
+
+            Ptr<u8[]> file_data = arnewa u8[file_size];
+            stream->Read(file_data.get(), file_size);
+
+            if (file_size <= 12 || file_data[0] != 'R' || file_data[1] != 'I' || file_data[2] != 'F' || file_data[3] != 'F')
+                continue;
+
+            u16 num_channels = 1;
+            u32 sample_rate = 22050;
+            u16 bits_per_sample = 16;
+            i32 data_offset = 0;
+            i32 data_size = 0;
+            i32 offset = 12;
+
+            while (offset + 8 <= file_size)
+            {
+                u32 chunk_id = *reinterpret_cast<u32*>(&file_data[offset]);
+                u32 chunk_size = *reinterpret_cast<u32*>(&file_data[offset + 4]);
+
+                if (chunk_id == 0x20746D66 && offset + 24 <= file_size)
+                {
+                    u16 audio_format = *reinterpret_cast<u16*>(&file_data[offset + 8]);
+                    if (audio_format != 1)
+                        break;
+                    num_channels = *reinterpret_cast<u16*>(&file_data[offset + 10]);
+                    sample_rate = *reinterpret_cast<u32*>(&file_data[offset + 12]);
+                    bits_per_sample = *reinterpret_cast<u16*>(&file_data[offset + 22]);
+                }
+                else if (chunk_id == 0x61746164 && chunk_size > 0)
+                {
+                    data_offset = offset + 8;
+                    data_size = chunk_size;
+                    break;
+                }
+
+                offset += 8 + chunk_size;
+                if (chunk_size % 2)
+                    ++offset;
+            }
+
+            if (data_size <= 0)
+                continue;
+
+            SDL_AudioSpec spec;
+            SDL_zero(spec);
+            spec.format = (bits_per_sample == 16) ? SDL_AUDIO_S16 : SDL_AUDIO_U8;
+            spec.channels = num_channels;
+            spec.freq = static_cast<int>(sample_rate);
+
+            g_UIOptionsStream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
+            if (!g_UIOptionsStream)
+                continue;
+
+            g_UIOptionsLen = data_size;
+            g_UIOptionsData = static_cast<u8*>(SDL_malloc(data_size));
+            if (g_UIOptionsData)
+                SDL_memcpy(g_UIOptionsData, &file_data[data_offset], data_size);
+
+            SDL_ResumeAudioStreamDevice(g_UIOptionsStream);
+            break;
+        }
+    }
+
+    if (g_UIOptionsStream && g_UIOptionsData)
+    {
+        int queued = SDL_GetAudioStreamQueued(g_UIOptionsStream);
+        if (queued < g_UIOptionsLen)
+            SDL_PutAudioStreamData(g_UIOptionsStream, g_UIOptionsData, g_UIOptionsLen);
+    }
+}
+
+void MenuManager::PlayMenuSwitchSound()
+{
+    if (active_menu_id_ == IDM_OPTIONS)
+        PlayOptionsSoundNow();
+}
 
 void* MenuManager::GetFont(i32 size)
 {
@@ -94,6 +203,9 @@ MenuManager::MenuManager()
 
     active_menu_id_ = -1;
     next_active_menu_id_ = -1;
+
+    nav_bar_ = arnew uiNavBar();
+    AddChild(nav_bar_.get());
 }
 
 void MenuManager::CheckInput()
@@ -322,6 +434,9 @@ void MenuManager::SwitchNow(i32 id)
         Disable(active_menu_id_);
     }
 
+    if (UIMenu* new_menu = GetMenu(id))
+        new_menu->SetPreviousMenuID(active_menu_id_);
+
     Enable(id);
     active_menu_id_ = id;
 
@@ -433,7 +548,21 @@ uiWidget* MenuManager::MouseAction(i32 button, f32 x, f32 y)
     }
 
     if (nav_bar_)
+    {
+        // Coordinates come from the current menu's CheckInput, transformed by that menu's dimensions.
+        // The nav bar uses absolute coordinates (menu_x_=0, menu_y_=0, menu_width_=1, menu_height_=1),
+        // so reverse-transform to absolute space using the current menu's dimensions.
+        if (UIMenu* menu = GetCurrentMenu())
+        {
+            f32 mx, my, mw, mh;
+            menu->GetDimensions(mx, my, mw, mh);
+            f32 abs_x = x * mw + mx;
+            f32 abs_y = y * mh + my;
+            return nav_bar_->MouseHitCheck(button, abs_x, abs_y);
+        }
+
         return nav_bar_->MouseHitCheck(button, x, y);
+    }
 
     return nullptr;
 }

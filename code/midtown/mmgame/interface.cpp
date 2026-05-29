@@ -29,6 +29,9 @@ define_dummy_symbol(mmgame_interface);
 #include "pcwindis/dxinit.h"
 #include "agi/rsys.h"
 #include "mmui/main.h"
+#include "mmui/options.h"
+#include "mmui/placeholder_opts.h"
+#include "mmwidget/navbar.h"
 #include "agisw/swrend.h"
 #include "agiworld/quality.h"
 #include "agiworld/texsheet.h"
@@ -285,6 +288,81 @@ void mmInterface::Update()
                             break;
                         }
                     }
+                }
+                // Options menu dispatch
+                else if (menu->GetMenuID() == IDM_OPTIONS)
+                {
+                    switch (widget_id)
+                    {
+                        case IDC_OPTIONS_MENU_AUDIO:
+                            MenuMgr()->Switch(IDM_AUDIO);
+                            break;
+                        case IDC_OPTIONS_MENU_CONTROLS:
+                            MenuMgr()->Switch(IDM_CONTROLS);
+                            break;
+                        case IDC_OPTIONS_MENU_GRAPHICS:
+                            MenuMgr()->Switch(IDM_GRAPHICS);
+                            break;
+                        case IDC_OPTIONS_MENU_CREDITS:
+                            MenuMgr()->Switch(IDM_ABOUT);
+                            break;
+                    }
+                }
+                // Placeholder sub-option menus — Done button goes back to options
+                else if (menu->GetMenuID() == IDM_AUDIO || menu->GetMenuID() == IDM_GRAPHICS ||
+                         menu->GetMenuID() == IDM_CONTROLS || menu->GetMenuID() == IDM_ABOUT)
+                {
+                    if (widget_id == IDC_PLACEHOLDER_DONE)
+                    {
+                        // Preserve Options' previous menu ID (SwitchNow overwrites it)
+                        if (UIMenu* options = MenuMgr()->GetMenu(IDM_OPTIONS))
+                        {
+                            i32 saved_prev = options->GetPreviousMenuID();
+                            MenuMgr()->Switch(IDM_OPTIONS);
+                            options->SetPreviousMenuID(saved_prev);
+                        }
+                        else
+                        {
+                            MenuMgr()->Switch(IDM_OPTIONS);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Process nav bar action
+        if (uiNavBar* nav = static_cast<uiNavBar*>(MenuMgr()->GetNavBar()))
+        {
+            if (nav->GetState() == 4)
+            {
+                UIBMButton::PlayClickSound();
+                i32 widget_id = nav->GetWidgetID();
+                nav->ClearAction();
+
+                Displayf("Nav action: widget=%d", widget_id);
+
+                switch (widget_id)
+                {
+                    case IDC_NAV_OPT:
+                        MenuMgr()->Switch(IDM_OPTIONS);
+                        break;
+                    case IDC_NAV_HELP:
+                        break;
+                    case IDC_NAV_STOW:
+                        if (g_MainWindow)
+                            SDL_MinimizeWindow(g_MainWindow);
+                        break;
+                    case IDC_NAV_EXIT:
+                    {
+                        SDL_Event quit;
+                        quit.type = SDL_EVENT_QUIT;
+                        SDL_PushEvent(&quit);
+                        break;
+                    }
+                    case IDC_NAV_PREV:
+                        if (i32 prev = MenuMgr()->GetPreviousMenu(); prev >= 0)
+                            MenuMgr()->Switch(prev);
+                        break;
                 }
             }
         }

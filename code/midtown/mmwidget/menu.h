@@ -322,6 +322,11 @@ public:
         return prev_menu_id_;
     }
 
+    void SetPreviousMenuID(i32 id)
+    {
+        prev_menu_id_ = id;
+    }
+
     i32 GetWidgetCount() const
     {
         return widget_count_;
@@ -376,7 +381,11 @@ protected:
     i32 b_state_;
     i32 field_74;
     i32 widget_id_;
+
+public:
     i32 prev_menu_id_;
+
+protected:
     i32 focus_widget_index_;
     f32 field_84;
     i32 field_88;

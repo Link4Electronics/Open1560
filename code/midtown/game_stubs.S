@@ -6933,22 +6933,6 @@ _ZN8mmViewCS8GetClassEv:
     xor eax, eax
     ret
 
-// uiNavBar::SetPrevPos(float, float)
-.globl _ZN8uiNavBar10SetPrevPosEff
-.weak _ZN8uiNavBar10SetPrevPosEff
-.type _ZN8uiNavBar10SetPrevPosEff, @function
-_ZN8uiNavBar10SetPrevPosEff:
-    xor eax, eax
-    ret
-
-// uiNavBar::Update()
-.globl _ZN8uiNavBar6UpdateEv
-.weak _ZN8uiNavBar6UpdateEv
-.type _ZN8uiNavBar6UpdateEv, @function
-_ZN8uiNavBar6UpdateEv:
-    xor eax, eax
-    ret
-
 // BaseCamCS::AddWidgets(Bank*)
 .globl _ZN9BaseCamCS10AddWidgetsEP4Bank
 .weak _ZN9BaseCamCS10AddWidgetsEP4Bank

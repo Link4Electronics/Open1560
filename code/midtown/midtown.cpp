@@ -58,6 +58,7 @@ define_dummy_symbol(midtown);
 #include "mmui/driver.h"
 #include "mmui/main.h"
 #include "mmui/options.h"
+#include "mmui/placeholder_opts.h"
 #include "mmwidget/manager.h"
 #include "pcwindis/dxinit.h"
 #include "pcwindis/dxsetup.h"
@@ -566,6 +567,22 @@ static void MainPhase(i32 argc, char** argv)
                 mm_interface->MenuOptions = new OptionsMenu(IDM_OPTIONS);
                 mm_interface->MenuOptions->DeactivateNode();
                 MenuManager::Instance->AddMenu2(mm_interface->MenuOptions);
+
+                mm_interface->MenuAudioOpt = new AudioOptionMenu(IDM_AUDIO);
+                mm_interface->MenuAudioOpt->DeactivateNode();
+                MenuManager::Instance->AddMenu2(mm_interface->MenuAudioOpt);
+
+                mm_interface->MenuGraphicsOpt = new GraphicsOptionMenu(IDM_GRAPHICS);
+                mm_interface->MenuGraphicsOpt->DeactivateNode();
+                MenuManager::Instance->AddMenu2(mm_interface->MenuGraphicsOpt);
+
+                mm_interface->MenuControlOpt = new ControlOptionMenu(IDM_CONTROLS);
+                mm_interface->MenuControlOpt->DeactivateNode();
+                MenuManager::Instance->AddMenu2(mm_interface->MenuControlOpt);
+
+                mm_interface->MenuAboutOpt = new AboutOptionMenu(IDM_ABOUT);
+                mm_interface->MenuAboutOpt->DeactivateNode();
+                MenuManager::Instance->AddMenu2(mm_interface->MenuAboutOpt);
 
                 Sim()->AdoptChild(Ptr<asNode>(MenuManager::Instance));
 

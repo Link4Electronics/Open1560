@@ -1179,10 +1179,6 @@ __attribute__((weak)) i32 string::NumSubStrings() { return {}; }
 // UNPARSED MEMBER: [agi/lmodel.h] ARTS_IMPORT void operator=(const agiLightModelParameters& arg1);
 __attribute__((weak)) void string::SaveName(const string& arg1, i32 arg2, const string& arg3, const string& arg4) {}
 __attribute__((weak)) string string::SubString(i32 arg1) { return {}; }
-// --- uiNavBar ---
-__attribute__((weak)) void uiNavBar::SetPrevPos(f32 arg1, f32 arg2) {}
-__attribute__((weak)) i32 uiNavBar::Update() { return {}; }
-
 // === Vtable Stubs ===
 // vtables are automatically emitted when their first non-pure virtual function is defined
 // The member stubs above should provide those definitions

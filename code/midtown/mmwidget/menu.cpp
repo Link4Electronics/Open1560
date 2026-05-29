@@ -269,6 +269,8 @@ uiWidget* UIMenu::MouseHitCheck(i32 button, f32 x, f32 y)
             widget->MouseHit = 1;
             widget->MouseButton = button;
 
+            widget_id_ = widget->WidgetID;
+
             SetAction(eSource::Mouse);
 
             return widget;
@@ -544,8 +546,9 @@ void UIMenu::Enable()
 
     if (widget_count_ && !MenuMgr()->Is3D())
     {
-        GetWidget(focus_widget_index_)->Update();
-        GetWidget(focus_widget_index_)->Switch(true);
+        i32 idx = std::max(0, focus_widget_index_);
+        GetWidget(idx)->Update();
+        GetWidget(idx)->Switch(true);
     }
 }
 

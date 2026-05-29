@@ -53,9 +53,11 @@ These are no-ops on Linux and break their respective features:
 - **game_stubs.S size errors**: `UI_LEFT_MARGIN`, `UI_LEFT_MARGIN2` declared 8 bytes instead of 4 (`.long` → 4, `.quad` → 8 mismatch)
 - **Fonts not initialized in MenuManager ctor** (purpose of original game.asm code). `GetFont` now lazy-initializes via `mmText::CreateFont`.
 - **Many game features** rely on weak stubs (physics, AI, audio, network, etc.) and will not work until reimplemented
+- **Options sub-menus are placeholders**: Audio, Graphics, Controls, and About menus are simple UIMenu subclasses with only a "Done" button. Full implementations require reimplementing AudioOptions, GraphicsOptions, ControlSetup, and AboutMenu (all ARTS_IMPORT from game binary).
 
 ## Previously Fixed
 - `mmInterface::SetNavigationOrders()` — added to interface.cpp for widget tab ordering
 - `mmInterface::ShowMain()`, `Reset()`, `Update()` — real implementations
 - `UIMenu::SetFocusWidget()`, `SetSelected()` — added strong implementations
 - `MenuManager::GetFont(i32)` — added lazy font initialization
+- **Options screen navigation**: Fixed `UIMenu::Enable()` crash when `focus_widget_index_ == -1` (caused by `SetFocusWidget(-1)` in OptionsMenu ctor after SetFocusWidget got a real implementation). Added dispatch handlers in `mmInterface::Update()` for OptionsMenu buttons (Audio/Graphics/Controls → sub-menus, Credits → About). Removed `SetFocusWidget(-1)` from OptionsMenu constructor. Created placeholder sub-option menus registered in `midtown.cpp`.
