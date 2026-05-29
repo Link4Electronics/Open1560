@@ -22,6 +22,7 @@ define_dummy_symbol(mmeffects_mmtext);
 
 #include "agi/bitmap.h"
 #include "agi/pipeline.h"
+#include "arts7/cullmgr.h"
 #include "localize/localize.h"
 
 #include <cstring>
@@ -119,6 +120,36 @@ void mmTextNode::SetEffects(i32 line, i32 effects)
 
         touched_ = true;
     }
+}
+
+i32 mmTextNode::AddText(void* font, LocString* text, i32 effects, f32 x, f32 y)
+{
+    if (line_count_ >= max_lines_)
+        return -1;
+
+    mmTextData& line = lines_[line_count_];
+    line.Font = font;
+    line.X = x;
+    line.Y = y;
+    line.Effects = effects;
+
+    if (text && text->Text[0])
+        arts_strcpy(line.Text, text->Text);
+    else
+        line.Text[0] = '\0';
+
+    touched_ = true;
+    empty_ = false;
+
+    return line_count_++;
+}
+
+void mmTextNode::Update()
+{
+    asNode::Update();
+
+    if (asCullManager* cull = CullMgr())
+        cull->DeclareBitmap(this, text_bitmap_.get());
 }
 
 mmLocFontInfo::mmLocFontInfo(LocString* params)

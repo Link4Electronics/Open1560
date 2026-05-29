@@ -31,9 +31,7 @@ VehShowcase::VehShowcase(i32 arg1)
 
 void VehShowcase::PreSetup()
 {
-    auto bg = Showcases.SubString(MMSTATE.CurrentCar + 1);
-
-    AssignBackground(bg.get());
+    AssignBackground("veh_back");
 }
 
 void VehShowcase::PostSetup()

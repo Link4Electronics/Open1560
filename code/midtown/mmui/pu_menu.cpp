@@ -22,6 +22,7 @@ define_dummy_symbol(mmui_pu_menu);
 
 #include "agi/bitmap.h"
 #include "agi/pipeline.h"
+#include "arts7/cullmgr.h"
 #include "mmeffects/mmtext.h"
 #include "mmwidget/manager.h"
 
@@ -91,6 +92,14 @@ void PUMenuBase::Cull()
 
     if (MenuMgr()->Is3D())
         Pipe()->ClearBorder(x, y, width, height, 0);
+}
+
+void PUMenuBase::Update()
+{
+    if (asCullManager* cull = CullMgr())
+        cull->DeclareBitmap(this, bg_bitmap_.get());
+
+    UIMenu::Update();
 }
 
 Ptr<mmTextNode> PUMenuBase::CreateTextNode(f32 x, f32 y, f32 width, f32 height, i32 lines, i32 flags)

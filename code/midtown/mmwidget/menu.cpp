@@ -367,15 +367,21 @@ void UIMenu::KeyboardAction(eqEvent event)
 
     if (MenuMgr()->HasFocusedWidget())
     {
-        MenuMgr()->GetFocusedWidget()->CaptureAction(event);
-        MenuMgr()->GetActiveWidget()->MouseHit = false;
+        if (uiWidget* focused = MenuMgr()->GetFocusedWidget())
+            focused->CaptureAction(event);
+
+        if (uiWidget* active = MenuMgr()->GetActiveWidget())
+            active->MouseHit = false;
     }
     else
     {
-        GetActiveWidget()->Action(event);
+        if (uiWidget* active = GetActiveWidget())
+        {
+            active->Action(event);
 
-        if (event.Key.Key == EQ_VK_RETURN)
-            widget_id_ = GetActiveWidget()->WidgetID;
+            if (event.Key.Key == EQ_VK_RETURN)
+                widget_id_ = active->WidgetID;
+        }
     }
 }
 
@@ -387,8 +393,11 @@ void UIMenu::MouseAction(eqEvent event)
         MenuMgr()->SetActiveImeField(nullptr);
     }
 
-    GetActiveWidget()->Action(event);
-    GetActiveWidget()->ResetToolTip();
+    if (uiWidget* active = GetActiveWidget())
+    {
+        active->Action(event);
+        active->ResetToolTip();
+    }
 }
 
 void UIMenu::ClearToolTip()

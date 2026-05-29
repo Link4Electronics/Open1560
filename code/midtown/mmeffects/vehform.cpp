@@ -66,3 +66,18 @@ void mmVehicleForm::Update()
         CullMgr()->DeclareCullable(this);
     }
 }
+
+void (*mmVehicleForm::Lighter)(u8*, u32*, u32*, agiMeshSet*) {};
+
+void mmVehicleForm::SetShape(char* /*name*/, char* /*group*/, char* /*arg3*/, Vector3* /*offset*/)
+{
+    // TODO: Load meshes via GetMeshSet when agiMeshSet is available on standalone
+    // vehicle_mesh_ = GetMeshSet(name, group, offset, 0x107);
+    // if (vehicle_mesh_) damage_.Init(vehicle_mesh_);
+    // shadow_mesh_ = GetMeshSet(name, arg3, offset, 0x107);
+}
+
+void mmVehicleForm::Cull()
+{
+    // TODO: Render vehicle mesh + damage + shadow when agiMeshSet pipeline is available
+}

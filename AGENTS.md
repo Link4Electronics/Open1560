@@ -53,7 +53,8 @@ These are no-ops on Linux and break their respective features:
 ### Video player (`mmvid/videoplayer.cpp`)
 - Uses FFmpeg (libavformat/libavcodec/libswscale) to decode Intel Indeo 5 (IV50) AVI
 - Renders via a temporary `SDL_Renderer` before OpenGL pipeline init
-- Audio: PCM u8 played through SDL audio stream
+- **Letterboxed** via `SDL_SetRenderLogicalPresentation(…, SDL_LOGICAL_PRESENTATION_LETTERBOX)`
+- **Audio**: Decoded through FFmpeg audio codec; auto-detects PCM format (U8/S16/S32/F32), mono/stereo, any sample rate
 - Skip: any keypress, mouse click, joystick button, or quit event
 - Compile-time optional: define `ARTS_HAVE_FFMPEG` is set when FFmpeg found via pkg-config
 
@@ -67,6 +68,21 @@ These are no-ops on Linux and break their respective features:
 - **Intro video** plays only if FFmpeg dev libraries are installed at build time. Probes `game/logos.avi` then `logos.avi` to handle different CWDs.
 - **Font fallback** improved: adds Comic Sans MS font name mapping; searches `FONT/` and `fonts/` dirs with case fallback; tries Linux system fonts as last resort. Unknown font names fall back to Gill Sans MT.
 
+### Text rendering pipeline
+- `mmTextNode::AddText()` — was a weak stub returning 0. Now stores font/text/position/effects in `lines_[line_count_++]`, sets `touched_ = true`, returns the line index.
+- `mmTextNode::Update()` — was a weak stub doing nothing. Now calls `asNode::Update()` then `CullMgr()->DeclareBitmap(this, text_bitmap_)` to register the text node for rendering.
+- `PUMenuBase::Update()` — was a weak stub doing nothing. Now calls `CullMgr()->DeclareBitmap(this, bg_bitmap_)` then `UIMenu::Update()`.
+
+### Video player audio
+- Added `SDL_InitSubSystem(SDL_INIT_AUDIO)` before setting up the audio stream, since the video plays before the main menu (which normally initializes audio).
+- Replaced raw-packet audio feed with FFmpeg audio codec decode + format auto-detection (U8/S16/S32/F32 float, any channels/rate).
+
+### Vehicle/VehShowcase menus
+- Added bitmap buttons to Vehicle menu: Back (`onav_done`), Drive (`vehi_play`), Showcase (`vehi_show`), Auto (`veh_auto`).
+- Added interface dispatch for Vehicle menu button IDs (Back → Main, Showcase → IDM_SHOWCASE).
+- Removed broken `Showcases.SubString(CurrentCar+1)` background in VehShowcase -- now uses `"veh_back"` directly.
+- Added VehShowcase dispatch (returns to Vehicle menu).
+
 ## Previously Fixed
 - `mmInterface::SetNavigationOrders()` — added to interface.cpp for widget tab ordering
 - `mmInterface::ShowMain()`, `Reset()`, `Update()` — real implementations
@@ -76,3 +92,5 @@ These are no-ops on Linux and break their respective features:
 - **SwitchNow crash**: Added null check for `GetMenu(id)` in `SwitchNow()` to prevent crash when switching to a non-existent menu (e.g., Quick Race before Vehicle menu was registered)
 - **Vehicle/VehShowcase creation**: Added constructor implementations for `Vehicle`, `VehicleSelectBase`, and `VehShowcase`. Created and registered Vehicle (IDM_VEHICLE) and VehShowcase (IDM_SHOWCASE) menus in `midown.cpp`. 
 - **Intro video**: Implemented `PlayIntroVideo()` using FFmpeg + SDL renderer. Plays before OpenGL pipeline init. Skippable via keypress/mouse click. Probes multiple paths (`game/logos.avi`, `logos.avi`).
+- **Video letterbox + audio decode**: Added `SDL_SetRenderLogicalPresentation` for aspect-ratio-correct playback. Replaced raw-packet audio feed with FFmpeg audio codec decode + auto-format detection (U8/S16/S32/F32, any channels/rate).
+- **KeyboardAction/MouseAction null checks**: Added null-pointer guards in `UIMenu::KeyboardAction()` and `UIMenu::MouseAction()` to prevent segfault on menus with no widgets (e.g., placeholder Vehicle menu).

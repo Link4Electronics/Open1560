@@ -18,6 +18,35 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
+static bool GetSDLFormat(AVSampleFormat fmt, SDL_AudioFormat& sdl_fmt, i32& bytes_per_sample)
+{
+    switch (fmt)
+    {
+        case AV_SAMPLE_FMT_U8:
+        case AV_SAMPLE_FMT_U8P:
+            sdl_fmt = SDL_AUDIO_U8;
+            bytes_per_sample = 1;
+            return true;
+        case AV_SAMPLE_FMT_S16:
+        case AV_SAMPLE_FMT_S16P:
+            sdl_fmt = SDL_AUDIO_S16LE;
+            bytes_per_sample = 2;
+            return true;
+        case AV_SAMPLE_FMT_S32:
+        case AV_SAMPLE_FMT_S32P:
+            sdl_fmt = SDL_AUDIO_S32LE;
+            bytes_per_sample = 4;
+            return true;
+        case AV_SAMPLE_FMT_FLT:
+        case AV_SAMPLE_FMT_FLTP:
+            sdl_fmt = SDL_AUDIO_F32LE;
+            bytes_per_sample = 4;
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool PlayIntroVideo(SDL_Window* window, const char* filepath)
 {
     AVFormatContext* fmt_ctx = nullptr;
@@ -82,6 +111,9 @@ bool PlayIntroVideo(SDL_Window* window, const char* filepath)
         return false;
     }
 
+    // Maintain aspect ratio with letterboxing
+    SDL_SetRenderLogicalPresentation(renderer, vctx->width, vctx->height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+
     SDL_Texture* texture = SDL_CreateTexture(
         renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, vctx->width, vctx->height);
 
@@ -97,19 +129,43 @@ bool PlayIntroVideo(SDL_Window* window, const char* filepath)
     i32 rgb_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, vctx->width, vctx->height, 1);
     std::vector<u8> rgb_buf(static_cast<usize>(rgb_size));
 
+    // Audio setup
+    AVCodecContext* actx = nullptr;
     SDL_AudioStream* audio_stream_handle = nullptr;
 
     if (audio_stream >= 0)
     {
-        SDL_AudioSpec aspec {};
-        aspec.format = SDL_AUDIO_U8;
-        aspec.channels = 1;
-        aspec.freq = fmt_ctx->streams[audio_stream]->codecpar->sample_rate;
+        AVCodecParameters* apar = fmt_ctx->streams[audio_stream]->codecpar;
+        const AVCodec* acodec = avcodec_find_decoder(apar->codec_id);
 
-        audio_stream_handle = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &aspec, nullptr, nullptr);
+        if (acodec)
+        {
+            actx = avcodec_alloc_context3(acodec);
+            avcodec_parameters_to_context(actx, apar);
 
-        if (audio_stream_handle)
-            SDL_ResumeAudioStreamDevice(audio_stream_handle);
+            if (avcodec_open2(actx, acodec, nullptr) == 0)
+            {
+                SDL_AudioFormat sdl_fmt {};
+                i32 bytes_per_sample = 0;
+
+                if (GetSDLFormat(actx->sample_fmt, sdl_fmt, bytes_per_sample))
+                {
+                    // Audio subsystem may not be initialized yet (video plays before main menu)
+                    SDL_InitSubSystem(SDL_INIT_AUDIO);
+
+                    SDL_AudioSpec aspec {};
+                    aspec.format = sdl_fmt;
+                    aspec.channels = static_cast<Uint8>(actx->ch_layout.nb_channels);
+                    aspec.freq = actx->sample_rate;
+
+                    audio_stream_handle =
+                        SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &aspec, nullptr, nullptr);
+
+                    if (audio_stream_handle)
+                        SDL_ResumeAudioStreamDevice(audio_stream_handle);
+                }
+            }
+        }
     }
 
     bool quit = false;
@@ -159,9 +215,22 @@ bool PlayIntroVideo(SDL_Window* window, const char* filepath)
                 }
             }
         }
-        else if (packet->stream_index == audio_stream && audio_stream_handle)
+        else if (packet->stream_index == audio_stream && actx)
         {
-            SDL_PutAudioStreamData(audio_stream_handle, packet->data, static_cast<i32>(packet->size));
+            // Decode audio packets and feed decoded PCM to SDL
+            if (avcodec_send_packet(actx, packet) >= 0)
+            {
+                while (avcodec_receive_frame(actx, frame) >= 0)
+                {
+                    if (audio_stream_handle)
+                    {
+                        i32 data_size = av_get_bytes_per_sample(actx->sample_fmt) * frame->nb_samples *
+                            (actx->ch_layout.nb_channels);
+
+                        SDL_PutAudioStreamData(audio_stream_handle, frame->extended_data[0], data_size);
+                    }
+                }
+            }
         }
 
         av_packet_unref(packet);
@@ -170,31 +239,67 @@ bool PlayIntroVideo(SDL_Window* window, const char* filepath)
     // Drain remaining frames
     if (!quit)
     {
+        if (actx)
+            avcodec_send_packet(actx, nullptr);
+
         avcodec_send_packet(vctx, nullptr);
 
-        while (avcodec_receive_frame(vctx, frame) >= 0)
+        bool video_done = false;
+        bool audio_done = !actx;
+
+        while (!video_done || !audio_done)
         {
-            AVFrame* rgb_tmp = av_frame_alloc();
-            av_image_fill_arrays(
-                rgb_tmp->data, rgb_tmp->linesize, rgb_buf.data(), AV_PIX_FMT_RGB24, vctx->width, vctx->height, 1);
+            if (!video_done)
+            {
+                i32 ret = avcodec_receive_frame(vctx, frame);
+                if (ret == 0)
+                {
+                    AVFrame* rgb_tmp = av_frame_alloc();
+                    av_image_fill_arrays(rgb_tmp->data, rgb_tmp->linesize, rgb_buf.data(), AV_PIX_FMT_RGB24, vctx->width,
+                        vctx->height, 1);
 
-            sws_scale(sws, frame->data, frame->linesize, 0, frame->height, rgb_tmp->data, rgb_tmp->linesize);
+                    sws_scale(sws, frame->data, frame->linesize, 0, frame->height, rgb_tmp->data, rgb_tmp->linesize);
 
-            SDL_UpdateTexture(texture, nullptr, rgb_buf.data(), vctx->width * 3);
+                    SDL_UpdateTexture(texture, nullptr, rgb_buf.data(), vctx->width * 3);
 
-            SDL_RenderClear(renderer);
-            SDL_RenderTexture(renderer, texture, nullptr, nullptr);
-            SDL_RenderPresent(renderer);
+                    SDL_RenderClear(renderer);
+                    SDL_RenderTexture(renderer, texture, nullptr, nullptr);
+                    SDL_RenderPresent(renderer);
 
-            av_frame_free(&rgb_tmp);
+                    av_frame_free(&rgb_tmp);
 
-            u64 target_ms = static_cast<u64>(frame_index * frame_duration * 1000.0);
-            u64 elapsed = SDL_GetTicks() - start_tick;
+                    u64 target_ms = static_cast<u64>(frame_index * frame_duration * 1000.0);
+                    u64 elapsed = SDL_GetTicks() - start_tick;
 
-            if (target_ms > elapsed)
-                SDL_Delay(static_cast<u32>(target_ms - elapsed));
+                    if (target_ms > elapsed)
+                        SDL_Delay(static_cast<u32>(target_ms - elapsed));
 
-            ++frame_index;
+                    ++frame_index;
+                }
+                else
+                {
+                    video_done = true;
+                }
+            }
+
+            if (!audio_done)
+            {
+                i32 ret = avcodec_receive_frame(actx, frame);
+                if (ret == 0)
+                {
+                    if (audio_stream_handle)
+                    {
+                        i32 data_size = av_get_bytes_per_sample(actx->sample_fmt) * frame->nb_samples *
+                            (actx->ch_layout.nb_channels);
+
+                        SDL_PutAudioStreamData(audio_stream_handle, frame->extended_data[0], data_size);
+                    }
+                }
+                else
+                {
+                    audio_done = true;
+                }
+            }
         }
     }
 
@@ -210,6 +315,10 @@ bool PlayIntroVideo(SDL_Window* window, const char* filepath)
 
     sws_freeContext(sws);
     avcodec_free_context(&vctx);
+
+    if (actx)
+        avcodec_free_context(&actx);
+
     avformat_close_input(&fmt_ctx);
 
     if (audio_stream_handle)

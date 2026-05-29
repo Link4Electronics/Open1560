@@ -20,82 +20,65 @@
 
 #include "mmwidget/menu.h"
 
+class asDofCS;
+class Card2D;
+class UIBMLabel;
+class UISlider;
+class UITextDropdown;
+class mmVehicleForm;
+
 class VehicleSelectBase : public UIMenu
 {
 public:
-    // ??0VehicleSelectBase@@QAE@H@Z
     ARTS_IMPORT VehicleSelectBase(i32 arg1);
-
-    // ??1VehicleSelectBase@@UAE@XZ
     ARTS_IMPORT ~VehicleSelectBase() override;
 
-    // ?AllSetCar@VehicleSelectBase@@QAEXPADH@Z
     ARTS_IMPORT void AllSetCar(char* arg1, i32 arg2);
-
-    // ?AssignVehicleStats@VehicleSelectBase@@QAEXHMMMM@Z
     ARTS_IMPORT void AssignVehicleStats(i32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5);
-
-    // ?CarMod@VehicleSelectBase@@QAEXAAH@Z
     ARTS_IMPORT void CarMod(i32& arg1);
-
-    // ?ColorCB@VehicleSelectBase@@QAEXXZ
     ARTS_IMPORT void ColorCB();
-
-    // ?CurrentVehicleIsLocked@VehicleSelectBase@@QAEHXZ
     ARTS_IMPORT i32 CurrentVehicleIsLocked();
-
-    // ?DecCar@VehicleSelectBase@@QAEXXZ | inline
     ARTS_IMPORT void DecCar();
-
-    // ?DecColor@VehicleSelectBase@@QAEXXZ
     ARTS_IMPORT void DecColor();
-
-    // ?FillStats@VehicleSelectBase@@QAEXXZ
     ARTS_IMPORT void FillStats();
-
-    // ?GetCarTitle@VehicleSelectBase@@QAEPADHPADFPAVstring@@@Z
     ARTS_IMPORT char* GetCarTitle(i32 arg1, char* arg2, i16 arg3, string* arg4);
-
-    // ?IncCar@VehicleSelectBase@@QAEXXZ | inline
     ARTS_IMPORT void IncCar();
-
-    // ?IncColor@VehicleSelectBase@@QAEXXZ
     ARTS_IMPORT void IncColor();
-
-    // ?InitCarSelection@VehicleSelectBase@@QAEXHMMMM@Z
     ARTS_IMPORT void InitCarSelection(i32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5);
-
-    // ?LoadStats@VehicleSelectBase@@QAEHPAD@Z
     ARTS_IMPORT i32 LoadStats(char* arg1);
-
-    // ?PostSetup@VehicleSelectBase@@UAEXXZ
     ARTS_IMPORT void PostSetup() override;
-
-    // ?PreSetup@VehicleSelectBase@@UAEXXZ
     ARTS_IMPORT void PreSetup() override;
-
-    // ?Reset@VehicleSelectBase@@UAEXXZ
     ARTS_EXPORT void Reset() override;
-
-    // ?SetLastUnlockedVehicle@VehicleSelectBase@@QAEXXZ
     ARTS_IMPORT void SetLastUnlockedVehicle();
-
-    // ?SetLockedLabel@VehicleSelectBase@@QAEXXZ
     ARTS_IMPORT void SetLockedLabel();
-
-    // ?SetPick@VehicleSelectBase@@QAEXHF@Z
     ARTS_IMPORT void SetPick(i32 arg1, i16 arg2);
-
-    // ?SetShowcaseFlag@VehicleSelectBase@@QAEXXZ | inline
     ARTS_IMPORT void SetShowcaseFlag();
-
-    // ?TDPickCB@VehicleSelectBase@@QAEXXZ
     ARTS_IMPORT void TDPickCB();
-
-    // ?Update@VehicleSelectBase@@UAEXXZ
     ARTS_IMPORT void Update() override;
 
+    i32 CurrentCar() const { return *reinterpret_cast<const i32*>(&gap90[0x00]); }
+    i32 CurrentColor() const { return *reinterpret_cast<const i32*>(&gap90[0x04]); }
+    i32 VehicleCount() const { return *reinterpret_cast<const i32*>(&gap90[0x08]); }
+
+    void SetCurrentCar(i32 v) { *reinterpret_cast<i32*>(&gap90[0x00]) = v; }
+    void SetCurrentColor(i32 v) { *reinterpret_cast<i32*>(&gap90[0x04]) = v; }
+
+    asDofCS* GetDofCSArray() const { return *reinterpret_cast<asDofCS* const*>(&gap90[0x3C]); }
+    void SetDofCSArray(asDofCS* v) { *reinterpret_cast<asDofCS**>(&gap90[0x3C]) = v; }
+
+    mmVehicleForm* GetVehicleFormArray() const { return *reinterpret_cast<mmVehicleForm* const*>(&gap90[0x4C]); }
+    void SetVehicleFormArray(mmVehicleForm* v) { *reinterpret_cast<mmVehicleForm**>(&gap90[0x4C]) = v; }
+
+    i32* GetTopSpeedArray() const { return *reinterpret_cast<i32* const*>(&gap90[0x50]); }
+    void SetTopSpeedArray(i32* v) { *reinterpret_cast<i32**>(&gap90[0x50]) = v; }
+
+    i32 GetUnlockLevel() const { return *reinterpret_cast<const i32*>(&gap90[0xD4]); }
+    void SetUnlockLevel(i32 v) { *reinterpret_cast<i32*>(&gap90[0xD4]) = v; }
+
+protected:
     u8 gap90[0xD8];
 };
+
+check_size(VehicleSelectBase, 0x168);
 
 check_size(VehicleSelectBase, 0x168);

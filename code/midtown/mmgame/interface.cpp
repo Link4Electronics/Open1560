@@ -26,12 +26,14 @@ define_dummy_symbol(mmgame_interface);
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_events.h>
 
+#include "eventq7/event.h"
 #include "pcwindis/dxinit.h"
 #include "agi/rsys.h"
 #include "mmui/main.h"
 #include "mmui/options.h"
 #include "mmui/placeholder_opts.h"
 #include "mmui/vehicle.h"
+#include "mmui/quitmenu.h"
 #include "mmwidget/navbar.h"
 #include "agisw/swrend.h"
 #include "agiworld/quality.h"
@@ -282,12 +284,8 @@ void mmInterface::Update()
                                 SDL_MinimizeWindow(g_MainWindow);
                             break;
                         case IDC_MAIN_MENU_CLOSE:
-                        {
-                            SDL_Event quit_event;
-                            quit_event.type = SDL_EVENT_QUIT;
-                            SDL_PushEvent(&quit_event);
+                            MenuMgr()->Switch(IDD_QUIT);
                             break;
-                        }
                     }
                 }
                 // Options menu dispatch
@@ -328,13 +326,57 @@ void mmInterface::Update()
                         }
                     }
                 }
-                // Vehicle menu — back button goes to main menu
+                // Vehicle menu
                 else if (menu->GetMenuID() == IDM_VEHICLE)
                 {
-                    if (widget_id == IDC_VEHICLE_BACK)
+                    switch (widget_id)
                     {
-                        MenuMgr()->Switch(IDM_MAIN);
+                        case IDC_VEHICLE_BACK:
+                            MenuMgr()->Switch(IDM_MAIN);
+                            break;
+                        case IDC_VEHICLE_DRIVE:
+                            // TODO: Start race
+                            break;
+                        case IDC_VEHICLE_SELECT:
+                            MenuMgr()->Switch(IDM_SHOWCASE);
+                            break;
+                        case IDC_VEHICLE_AUTO:
+                            // TODO: Toggle transmission
+                            break;
+                        case IDC_VEHICLE_PREV:
+                        {
+                            if (VehicleSelectBase* vs = static_cast<VehicleSelectBase*>(menu))
+                                vs->DecCar();
+                            break;
+                        }
+                        case IDC_VEHICLE_NEXT:
+                        {
+                            if (VehicleSelectBase* vs = static_cast<VehicleSelectBase*>(menu))
+                                vs->IncCar();
+                            break;
+                        }
                     }
+                }
+                // Quit confirmation dialog
+                else if (menu->GetMenuID() == IDD_QUIT)
+                {
+                    if (widget_id == IDC_QUIT_YES)
+                    {
+                        if (CloseCallback)
+                            CloseCallback();
+                    }
+                    else if (widget_id == IDC_QUIT_NO)
+                    {
+                        if (i32 prev = MenuMgr()->GetPreviousMenu(); prev >= 0)
+                            MenuMgr()->Switch(prev);
+                        else
+                            MenuMgr()->Switch(IDM_MAIN);
+                    }
+                }
+                // VehShowcase — back/any key returns to vehicle selection
+                else if (menu->GetMenuID() == IDM_SHOWCASE)
+                {
+                    MenuMgr()->Switch(IDM_VEHICLE);
                 }
             }
         }
@@ -363,9 +405,7 @@ void mmInterface::Update()
                         break;
                     case IDC_NAV_EXIT:
                     {
-                        SDL_Event quit;
-                        quit.type = SDL_EVENT_QUIT;
-                        SDL_PushEvent(&quit);
+                        MenuMgr()->Switch(IDD_QUIT);
                         break;
                     }
                     case IDC_NAV_PREV:

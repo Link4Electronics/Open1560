@@ -24,6 +24,13 @@ enum
 {
     IDC_VEHICLE_SELECT = 150,
     IDC_VEHICLE_BACK = 151,
+    IDC_VEHICLE_PREV = 152,
+    IDC_VEHICLE_NEXT = 153,
+    IDC_VEHICLE_COLOR_PREV = 154,
+    IDC_VEHICLE_COLOR_NEXT = 155,
+    IDC_VEHICLE_AUTO = 156,
+    IDC_VEHICLE_PHYSICS = 157,
+    IDC_VEHICLE_DRIVE = 158,
 };
 
 class Vehicle final : public VehicleSelectBase

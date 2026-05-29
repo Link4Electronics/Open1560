@@ -61,6 +61,7 @@ define_dummy_symbol(midtown);
 #include "mmui/placeholder_opts.h"
 #include "mmui/vehicle.h"
 #include "mmui/vshow.h"
+#include "mmui/quitmenu.h"
 #include "mmvid/videoplayer.h"
 #include "mmwidget/manager.h"
 #include "pcwindis/dxinit.h"
@@ -621,6 +622,12 @@ static void MainPhase(i32 argc, char** argv)
                 mm_interface->MenuVehShowcase->AssignBackground("veh_back");
                 mm_interface->MenuVehShowcase->DeactivateNode();
                 MenuManager::Instance->AddMenu2(mm_interface->MenuVehShowcase);
+
+                {
+                    QuitMenu* quit = new QuitMenu(IDD_QUIT);
+                    quit->DeactivateNode();
+                    MenuManager::Instance->AddMenu2(quit);
+                }
 
                 Sim()->AdoptChild(Ptr<asNode>(MenuManager::Instance));
 
