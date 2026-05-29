@@ -72,13 +72,15 @@ void VehicleSelectBase::PreSetup()
         *reinterpret_cast<i32*>(reinterpret_cast<char*>(&dofcs[car]) + 0x18) |= 1;
     }
 
-    // Set viewport on camera (weak stub - no-op on standalone)
-    asCamera* camera = reinterpret_cast<asCamera*>(&reinterpret_cast<u8*>(MenuManager::Instance)[0x24]);
-    f32 vx = *reinterpret_cast<f32*>(&gap90[0x74]);
-    f32 vy = *reinterpret_cast<f32*>(&gap90[0x7C]);
-    f32 vw = *reinterpret_cast<f32*>(&gap90[0x80]);
-    f32 vh = *reinterpret_cast<f32*>(&gap90[0x88]);
-    camera->SetViewport(vx, vy, vw, vh, 0);
+    // Set viewport on camera
+    if (asCamera* camera = MenuMgr()->GetCamera())
+    {
+        f32 vx = *reinterpret_cast<f32*>(&gap90[0x74]);
+        f32 vy = *reinterpret_cast<f32*>(&gap90[0x7C]);
+        f32 vw = *reinterpret_cast<f32*>(&gap90[0x80]);
+        f32 vh = *reinterpret_cast<f32*>(&gap90[0x88]);
+        camera->SetViewport(vx, vy, vw, vh, 0);
+    }
 }
 
 void VehicleSelectBase::Update()

@@ -536,7 +536,12 @@ void MenuManager::SwitchNow(i32 id)
     }
 
     if (UIMenu* new_menu = GetMenu(id))
-        new_menu->SetPreviousMenuID(active_menu_id_);
+    {
+        // Only initialize prev_menu_id_ on first entry — preserve any existing value
+        // so re-entering a menu doesn't corrupt the navigation chain.
+        if (new_menu->GetPreviousMenuID() < 0)
+            new_menu->SetPreviousMenuID(active_menu_id_);
+    }
 
     Enable(id);
     active_menu_id_ = id;

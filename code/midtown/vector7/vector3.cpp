@@ -26,6 +26,28 @@ define_dummy_symbol(vector7_vector3);
 #include "data7/metatype.h"
 #include "data7/miniparser.h"
 
+#include <cmath>
+
+f32 Vector3::Mag() const
+{
+    return std::sqrt(Mag2());
+}
+
+f32 Vector3::InvMag() const
+{
+    f32 m = Mag2();
+
+    if (m > 0.0f)
+        return 1.0f / std::sqrt(m);
+
+    return 0.0f;
+}
+
+f32 Vector3::Dist(const Vector3& other) const
+{
+    return (*this - other).Mag();
+}
+
 void Vector3::Dot(const Vector3& vec, const Matrix34& mat)
 {
     *this = (mat.m0 * vec.x) + (mat.m1 * vec.y) + (mat.m2 * vec.z) + mat.m3;

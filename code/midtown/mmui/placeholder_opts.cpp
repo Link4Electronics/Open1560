@@ -29,6 +29,7 @@ AudioOptionMenu::AudioOptionMenu(i32 menu_id)
     : UIMenu(menu_id)
 {
     AssignName(LOC_TEXT("Audio Options"));
+    AssignBackground("oaud_back");
 
     AddBMButton(IDC_PLACEHOLDER_DONE, "onav_done"_xconst, UI_LEFT_MARGIN, 0.8f, 4);
 
@@ -51,6 +52,7 @@ GraphicsOptionMenu::GraphicsOptionMenu(i32 menu_id)
     : UIMenu(menu_id)
 {
     AssignName(LOC_TEXT("Graphics Options"));
+    AssignBackground("ogra_back");
 
     AddBMButton(IDC_PLACEHOLDER_DONE, "onav_done"_xconst, UI_LEFT_MARGIN, 0.8f, 4);
 
@@ -73,6 +75,7 @@ ControlOptionMenu::ControlOptionMenu(i32 menu_id)
     : UIMenu(menu_id)
 {
     AssignName(LOC_TEXT("Controls Options"));
+    AssignBackground("ocon_back");
 
     AddBMButton(IDC_PLACEHOLDER_DONE, "onav_done"_xconst, UI_LEFT_MARGIN, 0.8f, 4);
 
