@@ -20,6 +20,12 @@
 
 #include "vselect.h"
 
+enum
+{
+    IDC_VEHICLE_SELECT = 150,
+    IDC_VEHICLE_BACK = 151,
+};
+
 class Vehicle final : public VehicleSelectBase
 {
 public:

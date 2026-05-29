@@ -20,5 +20,26 @@ define_dummy_symbol(mmui_vselect);
 
 #include "vselect.h"
 
+VehicleSelectBase::VehicleSelectBase(i32 arg1)
+    : UIMenu(arg1)
+{
+    p_b_state_ = &b_state_;
+    b_state_ = 0;
+}
+
+VehicleSelectBase::~VehicleSelectBase()
+{}
+
 void VehicleSelectBase::Reset()
 {}
+
+void VehicleSelectBase::PostSetup()
+{}
+
+void VehicleSelectBase::PreSetup()
+{}
+
+void VehicleSelectBase::Update()
+{
+    UIMenu::Update();
+}

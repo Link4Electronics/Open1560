@@ -59,6 +59,9 @@ define_dummy_symbol(midtown);
 #include "mmui/main.h"
 #include "mmui/options.h"
 #include "mmui/placeholder_opts.h"
+#include "mmui/vehicle.h"
+#include "mmui/vshow.h"
+#include "mmvid/videoplayer.h"
 #include "mmwidget/manager.h"
 #include "pcwindis/dxinit.h"
 #include "pcwindis/dxsetup.h"
@@ -465,6 +468,13 @@ static void MainPhase(i32 argc, char** argv)
     {
         ARTS_MEM_STAT("AGI Startup");
 
+        // Play intro video before initializing OpenGL pipeline
+        // so we can use a temporary SDL renderer without conflicting with GL
+        if (MMSTATE.GameState == mmGameState::Menus)
+        {
+            PlayIntroVideo(g_MainWindow, "game/logos.avi");
+        }
+
         if (InitPipeline(APPTITLE, argc, argv))
         {
             ShutdownPipeline();
@@ -583,6 +593,16 @@ static void MainPhase(i32 argc, char** argv)
                 mm_interface->MenuAboutOpt = new AboutOptionMenu(IDM_ABOUT);
                 mm_interface->MenuAboutOpt->DeactivateNode();
                 MenuManager::Instance->AddMenu2(mm_interface->MenuAboutOpt);
+
+                mm_interface->MenuVehicle = new Vehicle(IDM_VEHICLE);
+                mm_interface->MenuVehicle->AssignBackground("veh_back");
+                mm_interface->MenuVehicle->DeactivateNode();
+                MenuManager::Instance->AddMenu2(mm_interface->MenuVehicle);
+
+                mm_interface->MenuVehShowcase = new VehShowcase(IDM_SHOWCASE);
+                mm_interface->MenuVehShowcase->AssignBackground("veh_back");
+                mm_interface->MenuVehShowcase->DeactivateNode();
+                MenuManager::Instance->AddMenu2(mm_interface->MenuVehShowcase);
 
                 Sim()->AdoptChild(Ptr<asNode>(MenuManager::Instance));
 

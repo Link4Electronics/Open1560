@@ -4,7 +4,12 @@
 /GameDirectory.txt
 /CommandLine.txt
 
-/extra/1560.ar/
-
 /code/docs/
 /docs/_site/
+
+# Ignore game directory runtime files (archives, configs, logs)
+# but keep Open1560-README.url and open1560.ar (user-provided data)
+/game/*
+!/game/
+!/game/Open1560-README.url
+!/game/open1560.ar

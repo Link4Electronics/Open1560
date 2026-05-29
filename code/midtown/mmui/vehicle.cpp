@@ -19,3 +19,23 @@
 define_dummy_symbol(mmui_vehicle);
 
 #include "vehicle.h"
+
+Vehicle::Vehicle(i32 arg1)
+    : VehicleSelectBase(arg1)
+{}
+
+void Vehicle::PreSetup()
+{
+    AssignBackground("veh_back");
+}
+
+void Vehicle::PostSetup()
+{
+    VehicleSelectBase::PostSetup();
+}
+
+void Vehicle::SetSubMenu(i32 /*arg1*/)
+{}
+
+void Vehicle::SetSubMenuButtons()
+{}

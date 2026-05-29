@@ -30,6 +30,7 @@ file(GLOB_RECURSE ARTS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/mmnetwork/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/mmphysics/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/mmui/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mmvid/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/mmwidget/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/pcwindis/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/stream/*.cpp"
@@ -132,6 +133,15 @@ target_compile_options(Open1560 PRIVATE
 find_package(PkgConfig)
 if(PkgConfig_FOUND)
     pkg_check_modules(JPEG libjpeg)
+    pkg_check_modules(AVFORMAT libavformat)
+    pkg_check_modules(AVCODEC libavcodec)
+    pkg_check_modules(SWSCALE libswscale)
+    pkg_check_modules(AVUTIL libavutil)
+endif()
+
+if(AVFORMAT_FOUND AND AVCODEC_FOUND AND SWSCALE_FOUND AND AVUTIL_FOUND)
+    target_compile_definitions(arts_objs PRIVATE ARTS_HAVE_FFMPEG)
+    target_compile_definitions(Open1560 PRIVATE ARTS_HAVE_FFMPEG)
 endif()
 
 target_link_libraries(Open1560
@@ -142,10 +152,16 @@ target_link_libraries(Open1560
     OpenGL::GL
     ${FREETYPE_LIBRARIES}
     ${JPEG_LIBRARIES}
+    ${AVFORMAT_LIBRARIES}
+    ${AVCODEC_LIBRARIES}
+    ${SWSCALE_LIBRARIES}
+    ${AVUTIL_LIBRARIES}
     dl
     pthread
     m
 )
+
+target_include_directories(Open1560 PRIVATE ${JPEG_INCLUDE_DIRS} ${AVFORMAT_INCLUDE_DIRS} ${AVCODEC_INCLUDE_DIRS} ${SWSCALE_INCLUDE_DIRS} ${AVUTIL_INCLUDE_DIRS})
 
 # Copy binary to game directory after build
 add_custom_command(TARGET Open1560 POST_BUILD

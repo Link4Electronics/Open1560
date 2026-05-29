@@ -31,6 +31,7 @@ define_dummy_symbol(mmgame_interface);
 #include "mmui/main.h"
 #include "mmui/options.h"
 #include "mmui/placeholder_opts.h"
+#include "mmui/vehicle.h"
 #include "mmwidget/navbar.h"
 #include "agisw/swrend.h"
 #include "agiworld/quality.h"
@@ -325,6 +326,14 @@ void mmInterface::Update()
                         {
                             MenuMgr()->Switch(IDM_OPTIONS);
                         }
+                    }
+                }
+                // Vehicle menu — back button goes to main menu
+                else if (menu->GetMenuID() == IDM_VEHICLE)
+                {
+                    if (widget_id == IDC_VEHICLE_BACK)
+                    {
+                        MenuMgr()->Switch(IDM_MAIN);
                     }
                 }
             }

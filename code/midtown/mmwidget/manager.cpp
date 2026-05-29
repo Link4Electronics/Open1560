@@ -426,6 +426,9 @@ void MenuManager::SwitchNow(i32 id)
     if (id == active_menu_id_)
         return;
 
+    if (!GetMenu(id))
+        return;
+
     bool had_previous = false;
 
     if (num_menus_ > 0 && active_menu_id_ >= 0)
