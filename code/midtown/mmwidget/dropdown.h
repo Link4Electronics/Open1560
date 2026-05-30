@@ -57,6 +57,12 @@ public:
     // ?Update@mmDropDown@@UAEXXZ
     ARTS_IMPORT void Update() override;
 
+    void SetDropEnabled(b32 enabled) { Enabled = enabled; }
+    f32 GetDropHeight() const { return DropHeight; }
+    i32 GetNumValues() const { return NumValues; }
+    f32 GetDropBottom() const { return Bottom; }
+    f32 GetDropHeightUnit() const { return Height; }
+
     VIRTUAL_META_DECLARE;
 
 private:

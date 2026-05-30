@@ -20,39 +20,25 @@
 
 #include "widget.h"
 
+#include "core/refcount.h"
+
 class agiBitmap;
 
 class UIIcon final : public uiWidget
 {
 public:
-    // ??0UIIcon@@QAE@XZ
     ARTS_IMPORT UIIcon();
-
-    // ??1UIIcon@@UAE@XZ
     ARTS_EXPORT ~UIIcon() override = default;
 
-    // ?CreateDummyBitmap@UIIcon@@QAEPAVagiBitmap@@XZ
     ARTS_IMPORT agiBitmap* CreateDummyBitmap();
-
-    // ?Cull@UIIcon@@UAEXXZ
     ARTS_IMPORT void Cull() override;
-
-    // ?GetHitArea@UIIcon@@QAEXAAM0@Z
     ARTS_IMPORT void GetHitArea(f32& arg1, f32& arg2);
-
-    // ?Init@UIIcon@@QAEXPADMM@Z
     ARTS_IMPORT void Init(char* arg1, f32 arg2, f32 arg3);
-
-    // ?LoadBitmap@UIIcon@@QAEXPAD@Z
     ARTS_IMPORT void LoadBitmap(char* arg1);
-
-    // ?Switch@UIIcon@@UAEXH@Z
     ARTS_IMPORT void Switch(b32 arg1) override;
-
-    // ?Update@UIIcon@@UAEXXZ
     ARTS_IMPORT void Update() override;
 
-    u8 gap74[0x20];
+    i32 dst_x_ {0};
+    i32 dst_y_ {0};
+    Rc<agiBitmap> bitmap_;
 };
-
-check_size(UIIcon, 0x94);

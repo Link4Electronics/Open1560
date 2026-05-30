@@ -22,3 +22,9 @@ Notable changes include:
 * Improved Debug Menu
 * Improved Performance
 * Improved/Fixed Text Rendering
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0** – see the [LICENSE](LICENSE.txt) file for details.
+
+This project is **not affiliated with or endorsed by Microsoft or Electronic Arts.** "Midtown Madness" is a registered trademark of Microsoft Corporation. All game assets (data files, graphics, sounds, 3D models) remain the property of their respective owners. The reimplementation source code is the only portion covered by the GPLv3 license.

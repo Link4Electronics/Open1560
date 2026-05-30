@@ -1,5 +1,23 @@
 # Open1560 — Agent Context
 
+## AR File Debugging Tools
+Python scripts for inspecting AR archives (located in project root):
+- **`parse_ar.py`** — Lists all files in AR archives with pixel dimensions for BMF/DDS/JPG/PNG/TGA/BMP. Shows button bitmap paths and dimensions. Usage: `./parse_ar.py`
+- **`debug_ar.py`** — Dumps raw directory structure of an AR file (node entries, offsets, sizes, names). Good for understanding the VFS layout.
+- AR format: u32 magic(`0x53455241 "ARES"`) + u32 node_count + u32 root_count + u32 names_size + node[count] + names_data + file_data. Each node is 12 bytes: u32 offset/u32 size_flags/u32 name_flags.
+- File names can embed `\x01` (integer placeholder filled from name_int field) and extensions from a separate extension table.
+
+### Ownership rules for Ptr<T> + AdoptChild
+- `Ptr<T>` is `unique_ptr<T>`. When calling `AdoptChild(Ptr<asNode>(std::move(ptr)))`, ownership transfers to the child list.
+- **NEVER** do `AdoptChild(Ptr<asNode>(&*ptr))` — this creates a second unique_ptr to the same object, causing double-free.
+- Pattern: keep a raw pointer for later access, move the unique_ptr into AdoptChild:
+  ```cpp
+  Ptr<mmDropDown> dd = arnew mmDropDown();
+  dd->Init(...);
+  raw_ptr_ = dd.get();          // raw pointer for later access
+  AdoptChild(Ptr<asNode>(std::move(dd))); // ownership transferred
+  ```
+
 ## Project
 Reverse-engineering of Midtown Madness 1 Beta. C++ + x86 assembly (game.asm) + SDL3 + OpenGL. CMake build targeting Linux.
 
@@ -66,6 +84,20 @@ These are no-ops on Linux and break their respective features:
   - `mnav_opt` at (0.72, 0.0), `mnav_help` at (0.80, 0.0), `mnav_stow` at (0.88, 0.0), `mnav_exit` at (0.96, 0.0)
   - `mnav_prev` at (0.0, 0.9) — hidden via `SetPrevPos(0,0)` on sub-menus
   - NavBar always has `ActivateNode()` in its constructor; only `DisableNavBar` stops it.
+
+### UIIcon widget
+- `UIIcon` loads a bitmap at given pixel position and renders it via `CopyBitmap`.
+- `Init(name, x, y)` converts float widget coords to pixel `dst_x_ = (int)(pipe_width * x)`, `dst_y_ = (int)(pipe_height * y)`; calls `Pipe()->GetBitmap(name, 0,0,1)` to load; creates 50×50 dummy bitmap fallback if not found.
+- Lifecycle: `LoadBitmap()` in Init → `Update()` declares bitmap via `CullMgr()->DeclareBitmap(this, bitmap_.get())` → `Cull()` renders `Pipe()->CopyBitmap(dst_x_, dst_y_, bitmap_, 0, 0, width, height)`.
+- `GetHitArea()` returns ratio of bitmap dimensions to pipe dimensions for hit testing.
+
+### UITextDropdown + mmDropDown (expanded list)
+- `drop_arrow` bitmap has 3 frames stacked vertically: normal (0), hover/active (1), expanded (2). Loaded in `UITextDropdown::Init()` from `ui.ar`.
+- `mmDropDown` manages per-item text nodes. `InitString(options)` creates `mmTextNode` per pipe-separated option at `(X, Bottom + i*Height)`. `SetHighlight(i)` toggles BORDER+HIGHLIGHT effects on the highlighted item.
+- `SetSliderFocus(1)` expands: sets `expanded_=1`, updates `MaxY` hit bounds to include dropdown list height, enables mmDropDown rendering. `SetSliderFocus(0)` collapses.
+- `Action()` on click: when not expanded → `SetSliderFocus(1)` (expand); when expanded → compute hit index from `(mouseY - Bottom) / Height`, select item → `SetSliderFocus(0)` (collapse).
+- `CaptureAction()` updates highlight on mouse move over expanded list via `mmDropDown::GetHit`.
+- Keyboard: `EQ_VK_DOWN`/`RIGHT` cycles down, `EQ_VK_UP`/`LEFT` cycles up, `EQ_VK_RETURN`/`SPACE` toggles expand/collapse.
 
 ### About screen in game.asm
 - Original `AboutMenu` constructor (`game.asm:206689-206816`):
@@ -139,6 +171,11 @@ The vehicle selection screen (`IDM_VEHICLE`, `veh_back`) shows no 3D car. The fu
 - `mmInterface::ShowMain()`, `Reset()`, `Update()` — real implementations
 - `UIMenu::SetFocusWidget()`, `SetSelected()` — added strong implementations
 - `MenuManager::GetFont(i32)` — added lazy font initialization
+- **UIIcon implementation**: Rewrote `icon.h` with real members (`dst_x_`, `dst_y_`, `Rc<agiBitmap> bitmap_`). `icon.cpp` has full Init/LoadBitmap/Cull/GetHitArea/CreateDummyBitmap/Switch/Update.
+- **UITextDropdown expanded list**: Added `bitmap_` drop_arrow rendering (3 frames), `expanded_` flag, `SetSliderFocus()` toggle, `mmDropDown` child with per-item text nodes, hit-test selection in `Action()`, highlight tracking in `CaptureAction()`, keyboard navigation (arrows/enter/space).
+- **mmDropDown implementation**: Implemented all missing methods (Init, SetString, Update, GetHit, FindFirstEnabled, GetCurrentString, SetDisabledColors). Items rendered as child `mmTextNode`s with MM_TEXT_VCENTER/PADDING/REQUIRED effects.
+- **Driver menu selection**: Added `AddTextDropdown` player selector with expanded popup, prev/next buttons for keyboard navigation, info panel showing rank/last race/vehicle/controller/netname/score, `IncPlayer()`/`DecPlayer()`/`SetPlayerPick()` for player management.
+- **Ptr<T> + AdoptChild bug**: Documented that `AdoptChild(Ptr<asNode>(&*ptr))` creates double-ownership (both the local Ptr<unique_ptr> and AdoptChild's child list try to own the object). Use raw pointer + `std::move(ptr)` instead.
 - **Options screen navigation**: Fixed `UIMenu::Enable()` crash when `focus_widget_index_ == -1` (caused by `SetFocusWidget(-1)` in OptionsMenu ctor after SetFocusWidget got a real implementation). Added dispatch handlers in `mmInterface::Update()` for OptionsMenu buttons (Audio/Graphics/Controls → sub-menus, Credits → About). Removed `SetFocusWidget(-1)` from OptionsMenu constructor. Created placeholder sub-option menus registered in `midtown.cpp`.
 - **SwitchNow crash**: Added null check for `GetMenu(id)` in `SwitchNow()` to prevent crash when switching to a non-existent menu (e.g., Quick Race before Vehicle menu was registered)
 - **Vehicle/VehShowcase creation**: Added constructor implementations for `Vehicle`, `VehicleSelectBase`, and `VehShowcase`. Created and registered Vehicle (IDM_VEHICLE) and VehShowcase (IDM_SHOWCASE) menus in `midown.cpp`. 

@@ -29,6 +29,81 @@ mmDropDown::mmDropDown() = default;
 
 mmDropDown::~mmDropDown() = default;
 
+void mmDropDown::Init(asCamera* camera, void* font, f32 x, f32 y, f32 w, f32 h, string options, i32)
+{
+    Camera = camera;
+    Font = font;
+    X = x;
+    Y = y;
+    Height = h;
+    Width = w;
+    Bottom = y + h; // items start below button
+
+    InitString(std::move(options));
+}
+
+i32 mmDropDown::FindFirstEnabled()
+{
+    for (i32 i = 0; i < NumValues; ++i)
+    {
+        if (!(DisabledMask & (1 << i)))
+            return i;
+    }
+    return -1;
+}
+
+void mmDropDown::GetCurrentString(char* buf, i32 size)
+{
+    if (Highlighted >= 0 && Highlighted < NumValues)
+    {
+        string value = ValuesString.SubString(Highlighted + 1);
+        arts_strncpy(buf, value.get(), size);
+    }
+    else
+    {
+        if (size > 0)
+            buf[0] = '\0';
+    }
+}
+
+i32 mmDropDown::GetHit(f32 arg1, f32 arg2)
+{
+    if (NumValues <= 0 || Height <= 0.0f)
+        return -1;
+
+    f32 hit_y = arg2 - Bottom;
+    i32 index = static_cast<i32>(hit_y / Height);
+
+    if (index < 0 || index >= NumValues)
+        return -1;
+
+    return index;
+}
+
+void mmDropDown::SetDisabledColors()
+{
+    for (i32 i = 0; i < NumValues; ++i)
+    {
+        if (DisabledMask & (1 << i))
+        {
+            ValueNodes[i].SetEffects(0, MM_DROP_TEXT_EFFECTS);
+        }
+    }
+}
+
+void mmDropDown::SetString(string arg1)
+{
+    ValuesString = std::move(arg1);
+}
+
+void mmDropDown::Update()
+{
+    if (!Enabled)
+        return;
+
+    asNode::Update();
+}
+
 void mmDropDown::InitString(string values)
 {
     ValueNodes = nullptr;

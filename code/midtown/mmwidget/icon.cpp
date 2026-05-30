@@ -20,30 +20,70 @@ define_dummy_symbol(mmwidget_icon);
 
 #include "icon.h"
 
+#include "agi/bitmap.h"
+#include "agi/pipeline.h"
+#include "arts7/cullmgr.h"
+
+#include <cstdint>
+#include <cstdio>
+
 UIIcon::UIIcon() = default;
 
 void UIIcon::Init(char* arg1, f32 arg2, f32 arg3)
 {
+    dst_x_ = static_cast<i32>(Pipe()->GetWidth() * arg2);
+    dst_y_ = static_cast<i32>(Pipe()->GetHeight() * arg3);
     LoadBitmap(arg1);
 }
 
 void UIIcon::LoadBitmap(char* arg1)
 {
-    // Not implemented
+    RcOwner<agiBitmap> bmp = Pipe()->GetBitmap(arg1, 0.0f, 0.0f, 1);
+
+    if (bmp)
+    {
+        bitmap_ = as_rc std::move(bmp);
+    }
+    else
+    {
+        agiBitmap* dummy = CreateDummyBitmap();
+        if (dummy)
+            bitmap_ = Rc<agiBitmap>(dummy);
+    }
 }
 
 void UIIcon::Cull()
-{}
+{
+    if (!bitmap_)
+        return;
+
+    Pipe()->CopyBitmap(dst_x_, dst_y_, bitmap_.get(), 0, 0, bitmap_->GetWidth(), bitmap_->GetHeight());
+}
 
 void UIIcon::GetHitArea(f32& arg1, f32& arg2)
 {
-    arg1 = 0.0f;
-    arg2 = 0.0f;
+    if (bitmap_)
+    {
+        arg1 = static_cast<f32>(bitmap_->GetWidth()) / Pipe()->GetWidth();
+        arg2 = static_cast<f32>(bitmap_->GetHeight()) / Pipe()->GetHeight();
+    }
+    else
+    {
+        arg1 = 0.0f;
+        arg2 = 0.0f;
+    }
 }
 
 agiBitmap* UIIcon::CreateDummyBitmap()
 {
-    return nullptr;
+    RcOwner<agiBitmap> result = Pipe()->CreateBitmap();
+    if (!result)
+        return nullptr;
+
+    char name[32];
+    std::sprintf(name, "*DummyBM:%08x", reinterpret_cast<std::uintptr_t>(this));
+    result->Init(name, 50.0f, 50.0f, 0);
+    return result.release();
 }
 
 void UIIcon::Switch(b32 arg1)
@@ -55,4 +95,9 @@ void UIIcon::Switch(b32 arg1)
 }
 
 void UIIcon::Update()
-{}
+{
+    if (bitmap_)
+        CullMgr()->DeclareBitmap(this, bitmap_.get());
+
+    asNode::Update();
+}

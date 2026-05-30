@@ -29,6 +29,7 @@ define_dummy_symbol(mmui_driver);
 #include "mmcityinfo/state.h"
 #include "mmwidget/manager.h"
 #include "mmwidget/navbar.h"
+#include "mmwidget/textdrop.h"
 #include "mmeffects/mmtext.h"
 #include "stream/stream.h"
 
@@ -143,62 +144,76 @@ DriverMenu::DriverMenu(i32 menu_id)
 
 void DriverMenu::InitPlayerSelection()
 {
-    // Create text node for driver info display
+    // Compute dropdown position using driver menu fields (matching game.asm layout:
+    // dropdown_x = 0.114, dropdown_y = 0.05, dropdown_w = 0.375, dropdown_h = 0.0667)
+    f32 dd_x = UI_LEFT_MARGIN;
+    f32 dd_y = 0.05f;
+    f32 dd_w = 0.37f;
+    f32 dd_h = 0.0667f;
+
+    // Build initial options string (will be updated in PreSetup)
+    string options = "DriverX";
+
+    // Create dropdown for player selection
+    player_dd_ = AddTextDropdown(-1, LOC_TEXT("DRIVER"), &current_player_,
+        dd_x, dd_y, dd_w, dd_h, std::move(options), 18, 1, 0, Callback(), nullptr);
+
+    if (player_dd_)
+    {
+        // Position the value text to show after the label
+        // (the dropdown's value text node is automatically created)
+    }
+
+    // Create text node for driver info display (below dropdown)
     Ptr<mmTextNode> text_node = arnew mmTextNode();
-    text_node->Init(UI_LEFT_MARGIN, 0.05f, 0.7f, 0.60f, 14, BITMAP_TRANSPARENT);
+    text_node->Init(UI_LEFT_MARGIN, dd_y + dd_h + 0.02f, 0.7f, 0.55f, 12, BITMAP_TRANSPARENT);
 
     void* font16 = MenuMgr()->GetFont(16);
-    void* font20 = MenuMgr()->GetFont(20);
 
-    // Line 0: Player name label
-    text_node->AddText(font20, LOC_TEXT("Driver:"), MM_TEXT_REQUIRED, 0.0f, 0.0f);
-    // Line 1: Player name value (dynamic)
+    // Interleave label/value pairs so odd lines are values, even lines are labels
+    // Line 0: "RANKING:" label
+    text_node->AddText(font16, LOC_STRING(MM_IDS_365), MM_TEXT_REQUIRED, 0.0f, 0.0f);
+    // Line 1: Ranking value (dynamic)
+    text_node->AddText(font16, LOC_TEXT(""), 0, 0.3f, 0.0f);
 
-    // Line 2: "RANKING:"
-    text_node->AddText(font16, LOC_STRING(MM_IDS_365), MM_TEXT_REQUIRED, 0.0f, 0.06f);
-    // Line 3: Ranking value (dynamic)
+    // Line 2: "LAST RACE:" label
+    text_node->AddText(font16, LOC_STRING(MM_IDS_366), MM_TEXT_REQUIRED, 0.0f, 0.06f);
+    // Line 3: Last race value (dynamic)
+    text_node->AddText(font16, LOC_TEXT("None"), 0, 0.3f, 0.06f);
 
-    // Line 4: "LAST RACE:"
-    text_node->AddText(font16, LOC_STRING(MM_IDS_366), MM_TEXT_REQUIRED, 0.0f, 0.12f);
-    // Line 5: Last race (dynamic)
+    // Line 4: "LAST VEHICLE:" label
+    text_node->AddText(font16, LOC_STRING(MM_IDS_367), MM_TEXT_REQUIRED, 0.0f, 0.12f);
+    // Line 5: Last vehicle value (dynamic)
+    text_node->AddText(font16, LOC_TEXT("None"), 0, 0.3f, 0.12f);
 
-    // Line 6: "LAST VEHICLE:"
-    text_node->AddText(font16, LOC_STRING(MM_IDS_367), MM_TEXT_REQUIRED, 0.0f, 0.18f);
-    // Line 7: Last vehicle (dynamic)
+    // Line 6: "CONTROLLER:" label
+    text_node->AddText(font16, LOC_STRING(MM_IDS_368), MM_TEXT_REQUIRED, 0.0f, 0.18f);
+    // Line 7: Controller value (dynamic)
+    text_node->AddText(font16, LOC_TEXT("Keyboard/Mouse"), 0, 0.3f, 0.18f);
 
-    // Line 8: "CONTROLLER:"
-    text_node->AddText(font16, LOC_STRING(MM_IDS_368), MM_TEXT_REQUIRED, 0.0f, 0.24f);
-    // Line 9: Controller name (dynamic)
+    // Line 8: "NETNAME:" label
+    text_node->AddText(font16, LOC_STRING(MM_IDS_369), MM_TEXT_REQUIRED, 0.0f, 0.24f);
+    // Line 9: Net name value (dynamic)
+    text_node->AddText(font16, LOC_TEXT("Local"), 0, 0.3f, 0.24f);
 
-    // Line 10: "NETNAME:"
-    text_node->AddText(font16, LOC_STRING(MM_IDS_369), MM_TEXT_REQUIRED, 0.0f, 0.30f);
-    // Line 11: Net name (dynamic)
-
-    // Line 12: "SCORE:"
-    text_node->AddText(font16, LOC_STRING(MM_IDS_370), MM_TEXT_REQUIRED, 0.0f, 0.36f);
-    // Line 13: Score value (dynamic)
-
-    // Set initial dynamic values (will be updated in PreSetup)
-    text_node->AddText(font20, LOC_TEXT("DriverX"), 0, 0.2f, 0.0f);   // Line 1: player name
-    text_node->AddText(font16, LOC_TEXT(""), 0, 0.3f, 0.06f);         // Line 3: ranking
-    text_node->AddText(font16, LOC_TEXT("None"), 0, 0.3f, 0.12f);     // Line 5: last race
-    text_node->AddText(font16, LOC_TEXT("None"), 0, 0.3f, 0.18f);     // Line 7: last vehicle
-    text_node->AddText(font16, LOC_TEXT("Keyboard/Mouse"), 0, 0.3f, 0.24f); // Line 9: controller
-    text_node->AddText(font16, LOC_TEXT("Local"), 0, 0.3f, 0.30f);    // Line 11: net name
-    text_node->AddText(font16, LOC_TEXT("0"), 0, 0.3f, 0.36f);        // Line 13: score
+    // Line 10: "SCORE:" label
+    text_node->AddText(font16, LOC_STRING(MM_IDS_370), MM_TEXT_REQUIRED, 0.0f, 0.30f);
+    // Line 11: Score value (dynamic)
+    text_node->AddText(font16, LOC_TEXT("0"), 0, 0.3f, 0.30f);
 
     info_text_ = text_node.get();
     AdoptChild(Ptr<asNode>(std::move(text_node)));
 
-    // Prev/Next buttons for player selection
-    AddBMButton(IDC_DRIVER_PREV, "main_prev"_xconst, UI_LEFT_MARGIN, 0.05f, 4);
-    AddBMButton(IDC_DRIVER_NEXT, "main_next"_xconst, 0.15f, 0.05f, 4);
+    // Prev/Next buttons for player selection (above the info panel)
+    AddBMButton(IDC_DRIVER_PREV, "main_prev"_xconst, dd_x + dd_w + 0.01f, dd_y, 4);
+    AddBMButton(IDC_DRIVER_NEXT, "main_next"_xconst, dd_x + dd_w + 0.10f, dd_y, 4);
 
-    // Bottom buttons: New, Delete, Stats, Select Race
-    AddBMButton(IDC_DRIVER_NEW, "driv_new"_xconst, UI_LEFT_MARGIN, 0.70f, 4);
-    AddBMButton(IDC_DRIVER_DELETE, "driv_del"_xconst, UI_LEFT_MARGIN + 0.22f, 0.70f, 4);
-    AddBMButton(IDC_DRIVER_STATS, "driv_stats"_xconst, UI_LEFT_MARGIN + 0.44f, 0.70f, 4);
-    AddBMButton(IDC_DRIVER_SELECT, "driv_next"_xconst, UI_LEFT_MARGIN + 0.66f, 0.70f, 4);
+    // Bottom action buttons
+    f32 btn_y = 0.72f;
+    AddBMButton(IDC_DRIVER_NEW, "driv_new"_xconst, UI_LEFT_MARGIN, btn_y, 4);
+    AddBMButton(IDC_DRIVER_DELETE, "driv_del"_xconst, UI_LEFT_MARGIN + 0.22f, btn_y, 4);
+    AddBMButton(IDC_DRIVER_STATS, "driv_stats"_xconst, UI_LEFT_MARGIN + 0.44f, btn_y, 4);
+    AddBMButton(IDC_DRIVER_SELECT, "driv_next"_xconst, UI_LEFT_MARGIN + 0.66f, btn_y, 4);
 }
 
 void DriverMenu::PreSetup()
@@ -207,12 +222,30 @@ void DriverMenu::PreSetup()
 
     LoadPlayers();
 
-    // Select first player
-    current_player_ = 0;
+    // Build options string from player list
+    {
+        auto& list = GetPlayerList();
+        string options;
+
+        for (i32 i = 0; i < list.Count; ++i)
+        {
+            if (i > 0)
+                options += "|";
+            options += list.Names[i];
+        }
+
+        if (player_dd_)
+        {
+            player_dd_->AssignString(std::move(options));
+            player_dd_->SetValue(current_player_ < 0 ? 0 : current_player_);
+        }
+    }
+
+    if (current_player_ < 0)
+        current_player_ = 0;
 
     SetPlayerPick(current_player_);
 
-    // Update info display
     DisplayDriverInfo(nullptr, nullptr, nullptr, controller_name_, net_name_, MMCURRPLAYER.GetTotalScore());
 }
 
@@ -238,10 +271,6 @@ void DriverMenu::SetPlayerPick(i32 index)
     arts_strcpy(MMCURRPLAYER.FileName, list.Files[index]);
     arts_strcpy(MMCURRPLAYER.NetName, list.Names[index]);
     MMCURRPLAYER.Load(player_path);
-
-    // Update player name text
-    if (info_text_)
-        info_text_->SetString(1, LOC_TEXT(MMCURRPLAYER.PlayerName));
 }
 
 void DriverMenu::TDPickCB()
@@ -257,6 +286,10 @@ void DriverMenu::IncPlayer()
         return;
 
     current_player_ = (current_player_ + 1) % list.Count;
+
+    if (player_dd_)
+        player_dd_->SetValue(current_player_);
+
     SetPlayerPick(current_player_);
     DisplayDriverInfo(nullptr, nullptr, nullptr, controller_name_, net_name_, MMCURRPLAYER.GetTotalScore());
 }
@@ -268,6 +301,10 @@ void DriverMenu::DecPlayer()
         return;
 
     current_player_ = (current_player_ - 1 + list.Count) % list.Count;
+
+    if (player_dd_)
+        player_dd_->SetValue(current_player_);
+
     SetPlayerPick(current_player_);
     DisplayDriverInfo(nullptr, nullptr, nullptr, controller_name_, net_name_, MMCURRPLAYER.GetTotalScore());
 }
@@ -277,6 +314,8 @@ void DriverMenu::DisplayDriverInfo(
 {
     if (!info_text_)
         return;
+
+    // Line 1: ranking (unused for now)
 
     // Line 3: Last race
     const char* race = "None";

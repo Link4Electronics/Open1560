@@ -21,14 +21,15 @@
 #include "mmwidget/menu.h"
 
 class mmTextNode;
+class UITextDropdown;
 
 enum
 {
-    IDC_DRIVER_NEW = 50,
-    IDC_DRIVER_DELETE = 51,
-    IDC_DRIVER_STATS = 52,
-    IDC_DRIVER_PREV = 53,
-    IDC_DRIVER_NEXT = 54,
+    IDC_DRIVER_PREV = 50,
+    IDC_DRIVER_NEXT = 51,
+    IDC_DRIVER_NEW = 52,
+    IDC_DRIVER_DELETE = 53,
+    IDC_DRIVER_STATS = 54,
     IDC_DRIVER_SELECT = 9999,
 };
 
@@ -60,4 +61,5 @@ private:
     char controller_name_[80] {};
     char net_name_[80] {};
     mmTextNode* info_text_ {nullptr};
+    UITextDropdown* player_dd_ {nullptr};
 };

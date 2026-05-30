@@ -21,8 +21,11 @@
 #include "localize/localize.h"
 #include "widget.h"
 
+#include "core/refcount.h"
+
 class TextDropWidget;
 class mmTextNode;
+class mmDropDown;
 class UIIcon;
 class agiBitmap;
 
@@ -56,4 +59,13 @@ public:
     mmTextNode* ValueNode {nullptr};
     UIIcon* ArrowIcon {nullptr};
     i32 FontSize {16};
+
+    Rc<agiBitmap> bitmap_;
+    i32 dst_x_ {0};
+    i32 dst_y_ {0};
+    i32 bitmap_width_ {0};
+    i32 frame_height_ {0};
+    b32 expanded_ {false};
+
+    mmDropDown* drop_down_ {};
 };
