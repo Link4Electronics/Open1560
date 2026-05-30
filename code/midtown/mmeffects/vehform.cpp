@@ -21,6 +21,7 @@ define_dummy_symbol(mmeffects_vehform);
 #include "vehform.h"
 
 #include "agi/texdef.h"
+#include "agiworld/getmesh.h"
 #include "agiworld/quality.h"
 #include "agiworld/texsheet.h"
 #include "agiworld/texsort.h"
@@ -69,15 +70,26 @@ void mmVehicleForm::Update()
 
 void (*mmVehicleForm::Lighter)(u8*, u32*, u32*, agiMeshSet*) {};
 
-void mmVehicleForm::SetShape(char* /*name*/, char* /*group*/, char* /*arg3*/, Vector3* /*offset*/)
+void mmVehicleForm::SetShape(char* name, char* group, char* arg3, Vector3* offset)
 {
-    // TODO: Load meshes via GetMeshSet when agiMeshSet is available on standalone
-    // vehicle_mesh_ = GetMeshSet(name, group, offset, 0x107);
-    // if (vehicle_mesh_) damage_.Init(vehicle_mesh_);
-    // shadow_mesh_ = GetMeshSet(name, arg3, offset, 0x107);
+    vehicle_mesh_ = GetMeshSet(name, group, offset, 0x107);
+
+    if (arg3)
+        shadow_mesh_ = GetMeshSet(name, arg3, offset, 0x107);
 }
 
 void mmVehicleForm::Cull()
 {
-    // TODO: Render vehicle mesh + damage + shadow when agiMeshSet pipeline is available
+    if (vehicle_mesh_ && *color_pointer >= 0)
+    {
+        u32 color = static_cast<u32>(*color_pointer);
+        vehicle_mesh_->DrawColor(color, MESH_DRAW_CLIP);
+    }
+
+    if (shadow_mesh_)
+    {
+        Vector4 plane(0.0f, 1.0f, 0.0f, 0.0f);
+        Vector3 light_dir(0.0f, -1.0f, 0.0f);
+        shadow_mesh_->DrawShadow(MESH_DRAW_CLIP, plane, light_dir);
+    }
 }

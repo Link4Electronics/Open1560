@@ -121,7 +121,10 @@ void VehicleSelectBase::InitCarSelection(i32 mode, f32 x, f32 y, f32 w, f32 h)
         if (mem)
         {
             *reinterpret_cast<i32*>(mem) = count;
-            SetDofCSArray(reinterpret_cast<asDofCS*>(mem + 4));
+            asDofCS* dofcs = reinterpret_cast<asDofCS*>(mem + 4);
+            for (i32 i = 0; i < count; ++i)
+                new (&dofcs[i]) asDofCS();
+            SetDofCSArray(dofcs);
         }
     }
 
@@ -131,7 +134,10 @@ void VehicleSelectBase::InitCarSelection(i32 mode, f32 x, f32 y, f32 w, f32 h)
         if (mem)
         {
             *reinterpret_cast<i32*>(mem) = count;
-            SetVehicleFormArray(reinterpret_cast<mmVehicleForm*>(mem + 4));
+            mmVehicleForm* forms = reinterpret_cast<mmVehicleForm*>(mem + 4);
+            for (i32 i = 0; i < count; ++i)
+                new (&forms[i]) mmVehicleForm();
+            SetVehicleFormArray(forms);
         }
     }
 
@@ -195,7 +201,38 @@ void VehicleSelectBase::SetLockedLabel()
 {}
 
 void VehicleSelectBase::SetPick(i32 arg1, i16 arg2)
-{}
+{
+    CarMod(arg1);
+
+    i32 car = CurrentCar();
+    i32 count = VehicleListPtr ? VehicleListPtr->NumVehicles : 0;
+
+    if (count <= 0 || car < 0 || car >= count)
+        return;
+
+    mmVehicleForm* forms = GetVehicleFormArray();
+    mmVehInfo* info = VehicleListPtr ? VehicleListPtr->GetVehicleInfo(car) : nullptr;
+
+    if (forms && info && info->IsValid())
+    {
+        Vector3 offset(0.0f, 0.0f, 0.0f);
+            forms[car].SetShape(info->BaseName, const_cast<char*>("BODY"), const_cast<char*>("SHADOW"), &offset);
+    }
+
+    asDofCS* dofcs = GetDofCSArray();
+
+    if (dofcs)
+    {
+        for (i32 i = 0; i < count; ++i)
+            *reinterpret_cast<i32*>(reinterpret_cast<char*>(&dofcs[i]) + 0x18) &= ~1;
+
+        *reinterpret_cast<i32*>(reinterpret_cast<char*>(&dofcs[car]) + 0x18) |= 1;
+    }
+
+    MMSTATE.CurrentCar = car;
+
+    FillStats();
+}
 
 void VehicleSelectBase::TDPickCB()
 {}

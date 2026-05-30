@@ -83,6 +83,30 @@ These are no-ops on Linux and break their respective features:
 - Removed broken `Showcases.SubString(CurrentCar+1)` background in VehShowcase -- now uses `"veh_back"` directly.
 - Added VehShowcase dispatch (returns to Vehicle menu).
 
+### 3D Vehicle Preview — Missing Pipeline
+The vehicle selection screen (`IDM_VEHICLE`, `veh_back`) shows no 3D car. The full chain needs:
+
+| Layer | Component | Stub | File | Impact |
+|---|---|---|---|---|
+| 1 | `mmVehInfo::Load(char*)` | Weak ASM (returns 0) | `game_stubs.S:7329` | No `.info` files parsed → `NumVehicles = 0` |
+| 2 | `mmVehInfo::mmVehInfo()` | Weak C++ (empty) | `game_stubs.cpp:1139` | vtable not set, no zero-init |
+| 3 | `mmVehicleForm::SetShape()` | Weak C++ (no-op) | `vehform.cpp:72` | Never calls `GetMeshSet()`, `vehicle_mesh_` stays null |
+| 4 | `mmVehicleForm::Cull()` | Weak C++ (no-op) | `vehform.cpp:80` | No rendering code |
+| 5 | `GetMeshSet()` | Weak ASM (returns null) | `game_stubs.S:2168` | Core mesh loader → nothing loads |
+| 6 | `TEXSHEET.Load(const char*)` | Weak ASM (no-op) | `game_stubs.S:3447` | `mtl/global.tsh` never loaded → texture system dead |
+| 7 | `TEXSHEET.Lookup/GetVariationCount/RemapName` | All weak stubs | `game_stubs.cpp:574-578` | Texture lookup broken |
+| 8 | `VehicleSelectBase::SetPick()` | Weak C++ (no-op) | `vselect.cpp:197` | Car selection logic missing |
+
+**Vehicle data flow:**
+- `.info` files stored in AR archives as `tune/*.info` (e.g. `tune/BEETLE.INFO`)
+- Format: `BaseName=vpbug`, `Description=...`, `Colors=...`, `Flags=%d`, `Order=%d`, `ScoringBias=%f`, `Horsepower=%d`, `Top Speed=%d`, `Durability=%d`, `Mass=%d`
+- Default vehicle: `"vpbug"` (VW New Beetle)
+- Geometry: `bms/<name>[/<group>].bms` loaded via `GetMeshSet(name, group, offset, flags)`
+- Textures: `mtl/<name>.tsh` and `mtl/global.tsh` loaded via TEXSHEET
+- BMS file format: `u32 magic(0x4D534833 "MSH3")` + `Vector3 bounds` + BinaryLoad data
+- The `giMeshSet::BinaryLoad()` and rendering pipeline are already implemented in `agiworld/`
+- TEXSHEET is a weak object (uninitialized) — needs strong implementation for texture lookups
+
 ## Previously Fixed
 - `mmInterface::SetNavigationOrders()` — added to interface.cpp for widget tab ordering
 - `mmInterface::ShowMain()`, `Reset()`, `Update()` — real implementations

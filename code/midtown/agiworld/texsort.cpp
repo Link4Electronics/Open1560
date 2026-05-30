@@ -359,3 +359,28 @@ RcOwner<agiTexDef> GetPackedTexture(aconst char* name, i32 variation)
 
     return as_owner texture;
 }
+
+void FixTexFlags(agiTexParameters& tex)
+{
+    agiTexProp* prop = TEXSHEET.Lookup(tex.Name);
+
+    if (!prop)
+        return;
+
+    tex.Props = prop->Flags;
+
+    // Convert agiTexProp::Flags to agiTexParameters::Flags
+    if (prop->Flags & (agiTexProp::Transparent | agiTexProp::AlphaGlow))
+        tex.Flags |= agiTexParameters::Alpha;
+
+    if (prop->Flags & agiTexProp::Chromakey)
+        tex.Flags |= agiTexParameters::Chromakey;
+
+    tex.Flags |= agiTexParameters::WrapU | agiTexParameters::WrapV;
+
+    if (prop->Flags & (agiTexProp::ClampUOrBoth | agiTexProp::ClampUOrNeither))
+        tex.Flags &= ~agiTexParameters::WrapU;
+
+    if (prop->Flags & (agiTexProp::ClampVOrBoth | agiTexProp::ClampVOrNeither))
+        tex.Flags &= ~agiTexParameters::WrapV;
+}

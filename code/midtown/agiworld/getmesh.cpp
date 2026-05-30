@@ -19,84 +19,87 @@
 define_dummy_symbol(agiworld_getmesh);
 
 #include "getmesh.h"
-#include "agi/texdef.h"
-#include "pcwindis/setupdata.h"
-#include "texsheet.h"
 
-#include <algorithm>
+#include "agiworld/meshset.h"
+#include "agiworld/texsheet.h"
+#include "stream/fsystem.h"
+#include "stream/stream.h"
 
-static bool CheckEquals(const char* name, std::initializer_list<const char*> names)
+// ?MeshCurrentObject@@3PADA
+char* MeshCurrentObject {};
+
+// ?MeshBytesPaged@@3HA
+i32 MeshBytesPaged {};
+
+// ?MeshesPaged@@3HA
+i32 MeshesPaged {};
+
+// ?GetMeshSet@@YAPAVagiMeshSet@@PAD0PAVVector3@@H@Z
+agiMeshSet* GetMeshSet(aconst char* name, aconst char* group, Vector3* offset, i32 flags)
 {
-    return std::find_if(names.begin(), names.end(), [name](const char* other) { return !std::strcmp(name, other); }) !=
-        names.end();
-}
+    InitTexSheet();
 
-void FixTexFlags(agiTexParameters& tex)
-{
-    agiTexProp* prop = TEXSHEET.Lookup(tex.Name, 0);
+    char full_name[256];
+    arts_strcpy(full_name, name);
 
-    if (!prop)
-        return;
-
-    tex.Flags |= agiTexParameters::WrapU | agiTexParameters::WrapV;
-
-    switch (prop->Flags & agiTexProp::ClampModeMask)
+    if (group)
     {
-        case agiTexProp::ClampUOrBoth:
-        case agiTexProp::ClampUOrNeither: tex.Flags &= ~agiTexParameters::WrapU; break;
-
-        case agiTexProp::ClampVOrBoth:
-        case agiTexProp::ClampVOrNeither: tex.Flags &= ~agiTexParameters::WrapV; break;
-
-        case agiTexProp::ClampBoth: tex.Flags &= ~(agiTexParameters::WrapU | agiTexParameters::WrapV); break;
+        arts_strcat(full_name, "/");
+        arts_strcat(full_name, group);
     }
 
-    if (prop->Flags & agiTexProp::Transparent)
-        tex.Flags |= agiTexParameters::Alpha;
+    MeshCurrentObject = full_name;
 
-    if (prop->Flags & (agiTexProp::Chromakey | (GetRendererInfo().AdditiveBlending ? agiTexProp::AlphaGlow : 0)))
-        tex.Flags |= agiTexParameters::Chromakey;
+    char bms_path[256];
+    arts_sprintf(bms_path, "bms/%s", name);
 
-    tex.Color = prop->Color; // TODO: TEXSHEET.AllowRemapping ? prop->NightColor : prop->DayColor
-
-    if (prop->Flags & agiTexProp::AlphaGlow)
+    if (group)
     {
-        tex.Props |= agiTexProp::AlphaGlow;
-
-        if (!GetRendererInfo().AdditiveBlending)
-            tex.Flags |= agiTexParameters::Alpha;
+        arts_strcat(bms_path, "/");
+        arts_strcat(bms_path, group);
     }
 
-    if (prop->Flags & agiTexProp::Snowable)
+    arts_strcat(bms_path, ".bms");
+
+    Owner<Stream> stream = FileSystem::OpenAny(bms_path, true, nullptr, 0);
+
+    if (!stream)
+        return nullptr;
+
+    u32 magic = 0;
+    stream->Read(&magic, sizeof(magic));
+
+    if (magic != 0x4D534833)
     {
-        tex.Props |= agiTexProp::Snowable;
-        tex.Flags |= agiTexParameters::KeepLoaded | agiTexParameters::NoMipMaps;
+        Warningf("GetMeshSet: %s has invalid magic", bms_path);
+        return nullptr;
     }
 
-    if (prop->Flags & agiTexProp::Shadow)
-        tex.Props |= agiTexProp::Shadow;
+    Vector3 bounds;
+    stream->Read(&bounds, sizeof(bounds));
 
-    if (prop->Flags & agiTexProp::DullOrDamaged)
-        tex.Props |= agiTexProp::DullOrDamaged;
+    if (offset)
+    {
+        f32 dx = offset->x - bounds.x;
+        f32 dy = offset->y - bounds.y;
+        f32 dz = offset->z - bounds.z;
 
-    if (prop->Flags & agiTexProp::NotLit)
-        tex.Props |= agiTexProp::NotLit;
+        if (dx * dx + dy * dy + dz * dz > 1e-4f)
+            return nullptr;
+    }
 
-    if (prop->Flags & agiTexProp::RoadFloorCeiling)
-        tex.Flags |= agiTexParameters::NoMipMaps;
+    agiMeshSet* mesh = new agiMeshSet();
 
-    if (CheckEquals(tex.Name, {"WOMFACE", "MANFACE", "37_INSIDE"}))
-        tex.Props |= agiTexProp::AlwaysModulate;
+    if (flags & MESH_SET_VARIANT_MASK)
+        mesh->Variant = (flags >> MESH_SET_VARIANT_SHIFT) & 0xFF;
 
-    if (!std::strcmp(tex.Name, "SNOW"))
-        tex.Flags |= agiTexParameters::KeepLoaded;
+    mesh->BinaryLoad(stream.get());
+    mesh->Resident = 2;
 
-    if (CheckEquals(tex.Name,
-            {"T_STOP", "CHECK_POINT_02", "T_1WAY", "T_2WAY", "T_75", "T_DO_NOT_ENTER", "T_EXIT", "T_GLASS", "T_L_ONLY",
-                "T_PARK02", "T_WRONGWAY", "FREEWAY_EXITS", "VPSEMI_TRAILER_BED", "T_TUN_TOP", "VABUS_SD"}))
-        tex.Props |= agiTexProp::AlwaysPerspCorrect;
+    if (offset)
+        mesh->Offset(*offset);
 
-    // Reflections will draw over a transparent texture even if part of it is not visible
-    if (tex.Flags & agiTexParameters::Alpha)
-        tex.Props |= agiTexProp::DullOrDamaged;
+    ++MeshesPaged;
+
+    return mesh;
 }
