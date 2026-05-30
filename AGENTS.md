@@ -152,3 +152,31 @@ The vehicle selection screen (`IDM_VEHICLE`, `veh_back`) shows no 3D car. The fu
 - **Done button position**: Fixed to `(0.2f, 0.9f)` with `div_type=4` matching original game.asm (`placeholder_opts.cpp:109`).
 - **Product ID text position**: Adjusted to `(0.27f, 0.30f, 0.12f, 0.032f)` matching original menu-local `(0.203125, 0.2708333, 0.15625, 0.0375)` converted to screen-space (`placeholder_opts.cpp:114`).
 - **Scrolling credits on About screen**: Loads `ABOUT_CRED` (ui.ar) or fallback `CREDITS` bitmap. Scrolls at 50 px/s after 1.5s delay. Overrides `Update()` (computes scroll, calls `CullMgr()->DeclareBitmap`) and `Cull()` (renders wrapped CopyBitmap in two parts if scrolled past end). Positioned at screen `(0.1*w, 0.1*h)` with visible height `0.5*h` matching original hotspot `(0.1, 0.1, 0.5, 0.5)`.
+- **About credits position + direction**: Fixed position to use screen-normalized coords after ScaleWidget `(0.1915, 0.1555, 0.4275)`. Reversed scroll direction: scrolls DOWN instead of UP (renders at `src_y = height - scroll - vis_h` to move window downward through image).
+- **Vehicle list init**: Added `mmVehList` creation + `LoadAll()` call in `mmInterface::Reset()` (`interface.cpp:231`). Was missing — original called it from game.asm startup, so `NumVehicles=0` → 3D preview never rendered.
+
+## Big-Endian Support Notes (On Hold)
+
+If porting to big-endian platforms (e.g., PowerPC, SPARC, MIPS), the following areas need endian-awareness:
+
+### Binary file formats (all little-endian in original)
+- **BMS mesh files** (`bms/*.bms`): Header has `u32 magic(0x4D534833)` + `Vector3 bounds` + BinaryLoad vertex/index data. All multi-byte values need `le32toh`/`le16toh` etc.
+- **TSH texture sheet** (`mtl/*.tsh`): Text-based (ASCII), no endian issues.
+- **AR archives** (`*.ar`): File format uses little-endian u32 for entry counts and offsets. See `stream/farch.cpp`.
+- **DDS textures** (`*.dds`): DDS header is little-endian. Use `SDL_iostream` or similar for portable reads.
+- **BMF images** (`*.bmf`): Custom format — check `agisw/swbitmap.cpp` for pixel data access.
+
+### Platform assumptions
+- **`#pragma pack`**: Used extensively for struct layouts matching original 32-bit Windows. May cause issues on some BE compilers.
+- **`sizeof(void*)`**: 64-bit Linux assumes 8-byte pointers. All struct sizes verified with `check_size()` macros.
+- **x86 assembly stubs**: `game_stubs.S` has x86-64 assembly (`xor eax,eax` / `ret`). On non-x86, these must be replaced with C++ weak stubs or `#ifdef` guards.
+
+### Rendering / pixel data
+- **`u32` colors**: Stored as `0xAABBGGRR` (Windows GDI convention). On BE, byte-order reversal needed when reading/writing pixel data.
+- **DXT compressed textures**: Endian-independent at block level (S3TC), but mip chain sizes in headers are LE.
+
+### Steps to enable BE build
+1. Add `#include <endian.h>` and wrap all `magic`/multi-byte reads with `le32toh()`.
+2. Add `-DWORDS_BIGENDIAN` to CMake for BE targets, guard byte-swap code.
+3. Replace `game_stubs.S` x86 assembly with C++ weak stubs (most are already duplicated in `game_stubs.cpp`).
+4. Test with a BE emulator (QEMU user-mode for PowerPC/MIPS) or cross-compile toolchain.

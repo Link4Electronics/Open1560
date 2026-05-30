@@ -229,6 +229,13 @@ void mmInterface::SetNavigationOrders()
 void mmInterface::Reset()
 {
     SetStateDefaults();
+
+    // Initialize vehicle list if not already done (original game.asm calls LoadAll during startup)
+    if (!VehicleListPtr)
+    {
+        VehicleListPtr = new mmVehList();
+        VehicleListPtr->LoadAll();
+    }
 }
 
 void mmInterface::ShowMain(i32 /*arg1*/)
