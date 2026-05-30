@@ -165,7 +165,7 @@ The vehicle selection screen (`IDM_VEHICLE`, `veh_back`) 3D preview. Most C++ co
 
 **Limiting factors for 3D preview:**
 1. `GetMeshSet()` in `getmesh.cpp` was missing LOD suffix fallback. Vehicle BMS files use `_H`/`_M`/`_L`/`_VL` suffixes (e.g. `BODY_H.BMS`), but `GetMeshSet` was looking for `BODY.BMS` (no suffix). **Fixed**: now tries exact name, then `_H`, `_M`, `_L`, `_VL` in order (`getmesh.cpp:53-82`).
-2. Sound files — `audio.ar` is empty
+2. Sound files — `audio.ar`
 
 **Vehicle data flow (for reference when data is available):**
 - `.info` files: `tune/*.info` (e.g. `tune/BEETLE.INFO`)
