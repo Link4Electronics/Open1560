@@ -36,6 +36,8 @@ f32 UIMenu::UI_LEFT_MARGIN = 0.0f;
 #include "eventq7/event.h"
 
 #include "bm_button.h"
+#include "textdrop.h"
+#include "tdwidget.h"
 
 #include <algorithm>
 
@@ -620,4 +622,19 @@ UIBMButton* UIMenu::AddBMButton(i32 idc, aconst char* name, f32 x, f32 y, i32 ty
     button->Height *= 0.8f;
     AddWidget(button.get(), name, x, y, button->Width, button->Height, idc, nullptr);
     return button.release();
+}
+
+UITextDropdown* UIMenu::AddTextDropdown(i32 arg1, LocString* arg2, i32* arg3, f32 arg4, f32 arg5, f32 arg6, f32 arg7,
+    string arg8, i32 arg9, i32 arg10, i32 arg11, Callback arg12, char* arg13)
+{
+    ScaleWidget(arg4, arg5, arg6, arg7);
+
+    Ptr<UITextDropdown> dropdown = arnew UITextDropdown();
+    dropdown->Init(arg2, arg3, arg4, arg5, arg6, arg7, std::move(arg8), arg9, arg10, arg11, std::move(arg12), arg13);
+
+    UITextDropdown* raw = dropdown.get();
+    AddWidget(raw, arg13, arg4, arg5, arg6, arg7, arg1, nullptr);
+    AdoptChild(Ptr<asNode>(std::move(dropdown)));
+
+    return raw;
 }

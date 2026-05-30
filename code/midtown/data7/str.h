@@ -51,6 +51,20 @@ public:
         other.capacity_ = 0;
     }
 
+    string& operator=(string&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (data_)
+                delete[] data_;
+            data_ = other.data_;
+            capacity_ = other.capacity_;
+            other.data_ = nullptr;
+            other.capacity_ = 0;
+        }
+        return *this;
+    }
+
     // ??1string@@QAE@XZ | inline
     ARTS_EXPORT ~string()
     {

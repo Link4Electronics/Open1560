@@ -19,3 +19,40 @@
 define_dummy_symbol(mmwidget_icon);
 
 #include "icon.h"
+
+UIIcon::UIIcon() = default;
+
+void UIIcon::Init(char* arg1, f32 arg2, f32 arg3)
+{
+    LoadBitmap(arg1);
+}
+
+void UIIcon::LoadBitmap(char* arg1)
+{
+    // Not implemented
+}
+
+void UIIcon::Cull()
+{}
+
+void UIIcon::GetHitArea(f32& arg1, f32& arg2)
+{
+    arg1 = 0.0f;
+    arg2 = 0.0f;
+}
+
+agiBitmap* UIIcon::CreateDummyBitmap()
+{
+    return nullptr;
+}
+
+void UIIcon::Switch(b32 arg1)
+{
+    if (arg1)
+        ActivateNode();
+    else
+        DeactivateNode();
+}
+
+void UIIcon::Update()
+{}

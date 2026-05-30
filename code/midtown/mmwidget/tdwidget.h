@@ -19,65 +19,41 @@
 #pragma once
 
 #include "arts7/node.h"
+#include "data7/str.h"
 
 class asCamera;
 
 class TextDropWidget final : public asNode
 {
 public:
-    // ??0TextDropWidget@@QAE@XZ
-    ARTS_IMPORT TextDropWidget();
+    TextDropWidget();
+    ~TextDropWidget() override;
 
-    // ??1TextDropWidget@@UAE@XZ
-    ARTS_IMPORT ~TextDropWidget() override;
-
-    // ?Capture@TextDropWidget@@QAEHMM@Z
-    ARTS_IMPORT i32 Capture(f32 arg1, f32 arg2);
-
-    // ?DecDrop@TextDropWidget@@QAEHXZ
-    ARTS_IMPORT i32 DecDrop();
-
-    // ?GetClass@TextDropWidget@@UAEPAVMetaClass@@XZ
-    ARTS_IMPORT MetaClass* GetClass() override;
-
-    // ?GetDisabledMask@TextDropWidget@@QAEJXZ
-    ARTS_IMPORT ilong GetDisabledMask();
-
-    // ?IncDrop@TextDropWidget@@QAEHXZ
-    ARTS_IMPORT i32 IncDrop();
-
-    // ?Init@TextDropWidget@@QAEXPAVasCamera@@PAXMMMMMVstring@@H@Z
-    ARTS_IMPORT void Init(
+    i32 Capture(f32 arg1, f32 arg2);
+    i32 DecDrop();
+    MetaClass* GetClass() override;
+    ilong GetDisabledMask();
+    i32 IncDrop();
+    void Init(
         asCamera* arg1, void* arg2, f32 arg3, f32 arg4, f32 arg5, f32 arg6, f32 arg7, string arg8, i32 arg9);
+    i32 IsActive();
+    void SetActive(i32 arg1);
+    void SetDisabledMask(ilong arg1);
+    i32 SetHighlight(i32 arg1);
+    void SetString(string arg1);
+    i32 SetValue(i32 arg1);
+    void Switch(i32 arg1, Vector4& arg2);
+    void Update() override;
+    static void DeclareFields();
 
-    // ?IsActive@TextDropWidget@@QAEHXZ
-    ARTS_IMPORT i32 IsActive();
-
-    // ?SetActive@TextDropWidget@@QAEXH@Z
-    ARTS_IMPORT void SetActive(i32 arg1);
-
-    // ?SetDisabledMask@TextDropWidget@@QAEXJ@Z
-    ARTS_IMPORT void SetDisabledMask(ilong arg1);
-
-    // ?SetHighlight@TextDropWidget@@QAEHH@Z
-    ARTS_IMPORT i32 SetHighlight(i32 arg1);
-
-    // ?SetString@TextDropWidget@@QAEXVstring@@@Z
-    ARTS_IMPORT void SetString(string arg1);
-
-    // ?SetValue@TextDropWidget@@QAEHH@Z
-    ARTS_IMPORT i32 SetValue(i32 arg1);
-
-    // ?Switch@TextDropWidget@@QAEXHAAVVector4@@@Z
-    ARTS_IMPORT void Switch(i32 arg1, Vector4& arg2);
-
-    // ?Update@TextDropWidget@@UAEXXZ
-    ARTS_IMPORT void Update() override;
-
-    // ?DeclareFields@TextDropWidget@@SAXXZ
-    ARTS_IMPORT static void DeclareFields();
-
-    u8 gap20[0x18];
+    string Options;
+    i32 CurrentValue {0};
+    i32 Active {0};
+    i32 Highlight {-1};
+    ilong DisabledMask {0};
+    f32 PosX {0};
+    f32 PosY {0};
+    f32 SizeW {0};
+    f32 SizeH {0};
+    i32 FontSize {0};
 };
-
-check_size(TextDropWidget, 0x38);
