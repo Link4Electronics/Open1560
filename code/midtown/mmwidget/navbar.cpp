@@ -37,24 +37,24 @@ uiNavBar::uiNavBar()
 
     AssignName(LOC_TEXT("Nav Bar"));
 
-    mnav_opt_btn_ = AddBMButton(IDC_NAV_OPT, "mnav_opt"_xconst, 0.72f, 0.0f, 5);
+    mnav_opt_btn_ = AddBMButton(IDC_NAV_OPT, "mnav_opt"_xconst, 0.72f, 0.02f, 5);
     mnav_opt_btn_->Height = 0.05f;
-    mnav_opt_btn_->MaxY = 0.05f;
+    mnav_opt_btn_->MaxY = 0.07f;
 
     {
-        UIBMButton* help = AddBMButton(IDC_NAV_HELP, "mnav_help"_xconst, 0.80f, 0.0f, 3);
+        UIBMButton* help = AddBMButton(IDC_NAV_HELP, "mnav_help"_xconst, 0.79f, 0.02f, 3);
         help->Height = 0.05f;
-        help->MaxY = 0.05f;
+        help->MaxY = 0.07f;
     }
     {
-        UIBMButton* stow = AddBMButton(IDC_NAV_STOW, "mnav_stow"_xconst, 0.88f, 0.0f, 3);
+        UIBMButton* stow = AddBMButton(IDC_NAV_STOW, "mnav_stow"_xconst, 0.82f, 0.02f, 3);
         stow->Height = 0.05f;
-        stow->MaxY = 0.05f;
+        stow->MaxY = 0.07f;
     }
     {
-        UIBMButton* exit = AddBMButton(IDC_NAV_EXIT, "mnav_exit"_xconst, 0.96f, 0.0f, 3);
+        UIBMButton* exit = AddBMButton(IDC_NAV_EXIT, "mnav_exit"_xconst, 0.85f, 0.02f, 3);
         exit->Height = 0.05f;
-        exit->MaxY = 0.05f;
+        exit->MaxY = 0.07f;
     }
 
     mnav_prev_btn_ = AddBMButton(IDC_NAV_PREV, "mnav_prev"_xconst, 0.0f, 0.9f, 5);

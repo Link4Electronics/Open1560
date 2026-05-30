@@ -33,9 +33,9 @@ OptionsMenu::OptionsMenu(i32 menu_id)
     AddBMButton(IDC_OPTIONS_MENU_AUDIO, "onav_aud"_xconst, UI_LEFT_MARGIN, 0.2f, 4);
     AddBMButton(IDC_OPTIONS_MENU_CONTROLS, "onav_cont"_xconst, UI_LEFT_MARGIN, 0.4f, 4);
     AddBMButton(IDC_OPTIONS_MENU_GRAPHICS, "onav_gra"_xconst, UI_LEFT_MARGIN, 0.6f, 4);
-    AddBMButton(IDC_OPTIONS_MENU_CREDITS, "onav_credit"_xconst, UI_LEFT_MARGIN, 0.8f, 4);
+    AddBMButton(IDC_OPTIONS_MENU_CREDITS, "onav_credit"_xconst, 0.50f, 0.77f, 4);
 
-    uiWidget* hotspot = AddHotSpot(-1, "Previous"_xconst, 0.9f, 0.9f, 0.9f, 0.0f);
+    uiWidget* hotspot = AddHotSpot(-1, "Previous"_xconst, 0.877f, 0.987f, 0.9f, 0.0f);
     previous_x_ = hotspot->X;
     previous_y_ = hotspot->Y;
 

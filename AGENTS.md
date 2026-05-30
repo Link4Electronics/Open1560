@@ -47,8 +47,8 @@ These are no-ops on Linux and break their respective features:
 
 ### Menu layout
 - `UIMenu` constructor sets defaults: `menu_x_=0.114f, menu_y_=0.07f, menu_width_=0.775f, menu_height_=0.855f`
-- `UI_LEFT_MARGIN` overridden to `0.0f` in menu.cpp:33 (original in game.asm was `0.078125f`)
-- `main.cpp` buttons positioned using `UI_LEFT_MARGIN` shifted to left edge
+- `UI_LEFT_MARGIN` set to `0.0f` in menu.cpp:33 (game.asm has `0.078125f`, but game.asm reconstruction may not be 100% accurate for UI positions)
+- `main.cpp` buttons positioned using `UI_LEFT_MARGIN`
 
 ### Row convention for bitmaps vs. text
 - **Loaded bitmaps** (BMF/JPG from AR archives) store row 0 = bottom of image (OpenGL convention).
@@ -86,7 +86,7 @@ These are no-ops on Linux and break their respective features:
 - Compile-time optional: define `ARTS_HAVE_FFMPEG` is set when FFmpeg found via pkg-config
 
 ## Known Issues
-- **Buttons misplaced**: `UI_LEFT_MARGIN` set to 0.0f vs original 0.078125f
+- **Buttons misplaced**: `UI_LEFT_MARGIN` kept at `0.0f` (menu.cpp:33) even though game.asm has `0.078125f`. The game.asm reconstruction may not be 100% accurate — button positions were tuned empirically from a 1376×768 screenshot rather than using the game.asm constants. If adjusting positions, use the coordinate pipeline: widget → ScaleWidget(menu_x/y/w/h) → screen_norm → pixel.
 - **game_stubs.S size errors**: `UI_LEFT_MARGIN`, `UI_LEFT_MARGIN2` declared 8 bytes instead of 4 (`.long` → 4, `.quad` → 8 mismatch)
 - **Many game features** rely on weak stubs (physics, AI, audio, network, etc.) and will not work until reimplemented
 - **Vehicle selection screen** is a placeholder: shows `veh_back` background, no car selection logic or 3D showcase

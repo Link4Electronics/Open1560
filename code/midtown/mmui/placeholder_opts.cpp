@@ -45,6 +45,9 @@ AudioOptionMenu::AudioOptionMenu(i32 menu_id)
 void AudioOptionMenu::PreSetup()
 {
     prev_menu_id_ = IDM_OPTIONS;
+
+    if (MenuMgr())
+        MenuMgr()->GetNavBar()->SetPrevPos(0.726f, 0.880f);
 }
 
 void AudioOptionMenu::PostSetup()
@@ -68,6 +71,9 @@ GraphicsOptionMenu::GraphicsOptionMenu(i32 menu_id)
 void GraphicsOptionMenu::PreSetup()
 {
     prev_menu_id_ = IDM_OPTIONS;
+
+    if (MenuMgr())
+        MenuMgr()->GetNavBar()->SetPrevPos(0.726f, 0.880f);
 }
 
 void GraphicsOptionMenu::PostSetup()
@@ -91,6 +97,9 @@ ControlOptionMenu::ControlOptionMenu(i32 menu_id)
 void ControlOptionMenu::PreSetup()
 {
     prev_menu_id_ = IDM_OPTIONS;
+
+    if (MenuMgr())
+        MenuMgr()->GetNavBar()->SetPrevPos(0.726f, 0.880f);
 }
 
 void ControlOptionMenu::PostSetup()
