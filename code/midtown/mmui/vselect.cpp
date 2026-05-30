@@ -20,6 +20,8 @@ define_dummy_symbol(mmui_vselect);
 
 #include "vselect.h"
 
+#include <cstring>
+
 #include "agi/pipeline.h"
 #include "agi/viewport.h"
 #include "arts7/sim.h"
@@ -44,6 +46,7 @@ VehicleSelectBase::VehicleSelectBase(i32 arg1)
 {
     p_b_state_ = &b_state_;
     b_state_ = 0;
+    std::memset(gap90, 0, sizeof(gap90));
 }
 
 VehicleSelectBase::~VehicleSelectBase()
