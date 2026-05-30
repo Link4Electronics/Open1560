@@ -24,10 +24,10 @@ Reverse-engineering of Midtown Madness 1 Beta. C++ + x86 assembly (game.asm) + S
 ## Build & Test
 ```bash
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Debug
 make -j$(nproc)
 ```
-Requires data files from original MM1 Beta (mm1beta.ain, data.AR, etc.). Run from directory containing data.
+Requires data files from original MM1 (*.ar, midtown.map). Run from directory containing data which is named `game`.
 
 Optional: FFmpeg libraries (libavformat, libavcodec, libswscale) for intro video playback.
 

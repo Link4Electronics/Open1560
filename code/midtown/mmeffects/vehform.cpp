@@ -63,7 +63,7 @@ mmVehicleForm::~mmVehicleForm()
 
 void mmVehicleForm::Update()
 {
-    if (vehicle_mesh_ && shadow_mesh_)
+    if (vehicle_mesh_)
     {
         CullMgr()->DeclareCullable(this);
     }

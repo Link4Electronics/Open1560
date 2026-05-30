@@ -68,8 +68,7 @@ static void LoadCarMesh(VehicleSelectBase* base, i32 car)
     if (!info || !info->IsValid())
         return;
 
-    Vector3 offset(0.0f, 0.0f, 0.0f);
-    forms[car].SetShape(info->BaseName, const_cast<char*>("BODY"), const_cast<char*>("SHADOW"), &offset);
+    forms[car].SetShape(info->BaseName, const_cast<char*>("H"), const_cast<char*>("SHADOW_H"), nullptr);
 }
 
 void VehicleSelectBase::PreSetup()
@@ -203,9 +202,8 @@ void VehicleSelectBase::Update()
     // Set World and compute ModelView = View * World
     params.SetWorld(dofcs[car].World);
 
-    // Render the vehicle directly (bypasses the non-functional CullMgr)
+    // Set color for the CullMgr render pass (called from forms[car].Update() above)
     forms[car].SetColor(0x00FFFFFF);
-    forms[car].Cull();
 }
 
 void VehicleSelectBase::InitCarSelection(i32 mode, f32 x, f32 y, f32 w, f32 h)
@@ -335,8 +333,7 @@ void VehicleSelectBase::SetPick(i32 arg1, i16 arg2)
 
     if (forms && info && info->IsValid())
     {
-        Vector3 offset(0.0f, 0.0f, 0.0f);
-            forms[car].SetShape(info->BaseName, const_cast<char*>("BODY"), const_cast<char*>("SHADOW"), &offset);
+        forms[car].SetShape(info->BaseName, const_cast<char*>("H"), const_cast<char*>("SHADOW_H"), nullptr);
     }
 
     asDofCS* dofcs = GetDofCSArray();
