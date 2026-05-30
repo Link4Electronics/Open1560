@@ -541,6 +541,12 @@ mmFont* mmFont::Create(const char* font_name, i32 height, i32 weight)
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/TTF/DejaVuSans.ttf",
             "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+            "/usr/share/fonts/noto/NotoSans-Regular.ttf",
+            "/usr/share/fonts/truetype/droid/DroidSans.ttf",
+            "/usr/share/fonts/droid/DroidSans.ttf",
         };
 
         for (const char* sys_path : system_fonts)
@@ -724,6 +730,8 @@ void mmTextNode::RenderText(
         empty_ = false;
 
         mmFont* font = static_cast<mmFont*>(line.Font);
+        if (font == nullptr)
+            continue;
 
         mmRect rc;
         rc.left = line.X;
