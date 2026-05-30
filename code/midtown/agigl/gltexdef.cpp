@@ -18,6 +18,11 @@
 
 #include "gltexdef.h"
 
+#include <cstdio>
+#include <cstring>
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "agi/error.h"
 #include "agiworld/texsheet.h"
 #include "pcwindis/setupdata.h"
@@ -135,7 +140,7 @@ i32 agiGLTexDef::BeginGfx()
     GLenum type = 0;
     GLenum internal = 0;
     bool alpha = Tex.Flags & (agiTexParameters::Alpha | agiTexParameters::Chromakey);
-
+ 
     switch (surface->PixelFormat.RBitMask)
     {
         case 0xF800: // 565
@@ -162,7 +167,8 @@ i32 agiGLTexDef::BeginGfx()
             internal = alpha ? GL_RGBA8 : GL_RGB8;
             break;
 
-        default: Quitf("Invalid Format");
+        default:
+            Quitf("Invalid Format");
     }
 
 #if 0

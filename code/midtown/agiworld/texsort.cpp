@@ -328,7 +328,17 @@ RcOwner<agiTexDef> GetPackedTexture(aconst char* name, i32 variation)
     }
 
     if (!prop)
-        Quitf("Trying to load texture not in texsheet: '%s' (mesh = %s)", name, MeshCurrentObject);
+    {
+        // Auto-register a default entry for textures not in any texture sheet.
+        // DDS files with matching names in tex16a/tex16o/tex16 will be found
+        // by the texture loader without texture sheet entries.
+        agiTexProp default_prop {};
+        default_prop.High = 0;
+        default_prop.Medium = 1;
+        default_prop.Low = 2;
+        default_prop.Flags = 0;
+        prop = &default_prop;
+    }
 
     agiTexParameters tex;
     arts_strcpy(tex.Name, full_name);
@@ -341,8 +351,6 @@ RcOwner<agiTexDef> GetPackedTexture(aconst char* name, i32 variation)
     lib_tex.Flags &= ~(agiTexParameters::Alpha | agiTexParameters::WrapU | agiTexParameters::WrapV);
     lib_tex.Flags |= tex.Flags;
     lib_tex.Props |= tex.Props;
-
-    // NOTE: Originally checked if prop is null, but that isn't possible
 
     i32 pack_shift = (agiRQ.TextureQuality >= AGI_QUALITY_HIGH) ? prop->High
         : (agiRQ.TextureQuality >= AGI_QUALITY_MEDIUM)          ? prop->Medium

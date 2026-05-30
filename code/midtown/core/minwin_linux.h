@@ -427,9 +427,18 @@ inline BOOL UnmapViewOfFile(LPCVOID) { return TRUE; }
 inline BOOL ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead,
     OVERLAPPED* lpOverlapped)
 {
-    (void)lpOverlapped;
     int fd = (int)(intptr_t)hFile;
-    ssize_t result = ::read(fd, lpBuffer, nNumberOfBytesToRead);
+    ssize_t result;
+    if (lpOverlapped)
+    {
+        // Use pread to read at the specific offset (OVERLAPPED stores the file offset)
+        off_t offset = (off_t)lpOverlapped->Offset | ((off_t)lpOverlapped->OffsetHigh << 32);
+        result = ::pread(fd, lpBuffer, nNumberOfBytesToRead, offset);
+    }
+    else
+    {
+        result = ::read(fd, lpBuffer, nNumberOfBytesToRead);
+    }
     if (result < 0) return FALSE;
     if (lpNumberOfBytesRead) *lpNumberOfBytesRead = (DWORD)result;
     return TRUE;
@@ -438,9 +447,17 @@ inline BOOL ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, 
 inline BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten,
     OVERLAPPED* lpOverlapped)
 {
-    (void)lpOverlapped;
     int fd = (int)(intptr_t)hFile;
-    ssize_t result = ::write(fd, lpBuffer, nNumberOfBytesToWrite);
+    ssize_t result;
+    if (lpOverlapped)
+    {
+        off_t offset = (off_t)lpOverlapped->Offset | ((off_t)lpOverlapped->OffsetHigh << 32);
+        result = ::pwrite(fd, lpBuffer, nNumberOfBytesToWrite, offset);
+    }
+    else
+    {
+        result = ::write(fd, lpBuffer, nNumberOfBytesToWrite);
+    }
     if (result < 0) return FALSE;
     if (lpNumberOfBytesWritten) *lpNumberOfBytesWritten = (DWORD)result;
     return TRUE;

@@ -105,6 +105,55 @@ void mmVehList::LoadAll()
         }
     }
 
+    // If no .INFO files found, generate default vehicle info by scanning BMS directory
+    if (NumVehicles == 0)
+    {
+        for (i32 i = 0; i < FileSystem::FSCount; ++i)
+        {
+            FileSystem* fs = FileSystem::FS[i];
+
+            for (FileInfo* f = fs->FirstEntry("bms"); f; f = fs->NextEntry(f))
+            {
+                if (!f->IsDirectory)
+                    continue;
+
+                // Verify this is actually a vehicle by checking for BODY_H.BMS
+                char test_path[256];
+                arts_sprintf(test_path, "bms/%s/BODY_H.bms", f->Path);
+
+                if (!fs->QueryOn(test_path))
+                    continue;
+
+                Ptr<mmVehInfo> info = arnew mmVehInfo();
+
+                // Store BaseName in lowercase for compatibility
+                char* dst = info->BaseName;
+                const char* src = f->Path;
+                for (i32 j = 0; j < 39 && *src; ++j, ++src, ++dst)
+                    *dst = (*src >= 'A' && *src <= 'Z') ? *src + ('a' - 'A') : *src;
+                *dst = '\0';
+
+                arts_sprintf(info->Description, sizeof(info->Description), "%s", f->Path);
+                arts_strcpy(info->Colors, sizeof(info->Colors), "RED,BLUE,YELLOW,GREY,WHITE,BLACK,GREEN,PURPLE");
+                info->Flags = 0;
+                info->Order = NumVehicles;
+                info->Valid = true;
+                info->Horsepower = 200;
+                info->TopSpeed = 140;
+                info->Durability = 5;
+                info->Mass = 1500;
+                info->ScoringBias = 1.0f;
+
+                Ptr<mmVehInfo*[]> vehicles = arnewa mmVehInfo*[NumVehicles + 1];
+                for (i32 j = 0; j < NumVehicles; ++j)
+                    vehicles[j] = Vehicles[j];
+                vehicles[NumVehicles] = info.release();
+                Vehicles.swap(vehicles);
+                ++NumVehicles;
+            }
+        }
+    }
+
     SetDefaultVehicle("vpbug");
 }
 

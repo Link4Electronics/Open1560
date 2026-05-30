@@ -92,11 +92,24 @@ static inline constexpr u32 AlignSize(u32 value) noexcept
 
 void agiTexDef::DoPageIn()
 {
-    // NOTE: 64-bit incompatible
-#if defined(_WIN32) && !defined(_WIN64)
-    static_assert(sizeof(*Surface) == 0x7C);
-#endif
-    pager_.Read(Surface.get(), 0x4, sizeof(*Surface));
+    // DDS header is always 32-bit layout (124 bytes = 0x7C after magic).
+    // On 64-bit agiSurfaceDesc has different layout, so read into a temp buffer
+    // and copy fields manually.
+    alignas(4) u8 dds_header[0x7C];
+    pager_.Read(dds_header, 0x4, sizeof(dds_header));
+    std::memcpy(Surface.get(), dds_header, 32); // First 8 u32 fields (Size through AlphaBitDepth) match on both
+    // Union at offset 32: use szLut[4] (file stores DWORD dwReserved)
+    std::memcpy(&Surface->lpLut, dds_header + 32, 4);
+    Surface->Surface = nullptr;  // lpSurface in DDS is just a DWORD, not a real pointer
+    // ColorKeys at offset 40-71: same layout on 32/64-bit (all u32)
+    std::memcpy(&Surface->DestOverlay, dds_header + 40, 32);
+    // PixelFormat at offset 72-103: same layout on 32/64-bit (all u32)
+    std::memcpy(&Surface->PixelFormat, dds_header + 72, 32);
+    // DDSCAPS2 at offset 104-119: same on both
+    std::memcpy(&Surface->SCaps, dds_header + 104, 16);
+    // TextureStage at offset 120
+    std::memcpy(&Surface->TextureStage, dds_header + 120, 4);
+    Surface->Size = sizeof(*Surface); // Overwrite with actual struct size
 
     // FIXME: Some RV3 textures (SKY_*) have incorrect pitch.
     Surface->FixPitch();
@@ -210,25 +223,36 @@ void agiTexDef::PageInSurface()
 {
     if (pager_.Handle == 0)
     {
-        const char* path = TexSearchPath;
+        /* Use local paths instead of global TexSearchPath (BSS corruption bug) */
+        static const char* HW_PATHS[] = { "tex16a", "tex16o", "tex16", nullptr };
+        static const char* SW_PATHS[] = { "texp", nullptr };
+        const char** paths = Pipe() && Pipe()->IsHardware() ? HW_PATHS : SW_PATHS;
 
-        do
+        bool found = false;
+        for (const char** p = paths; *p; ++p)
         {
-            char buffer[64];
-
+            char buffer[256];
             if (Tex.LOD)
-                arts_sprintf(buffer, "%s/%s.%04d.dds", path, Tex.Name, Tex.LOD);
+                std::snprintf(buffer, sizeof(buffer), "%s/%s.%04d.dds", *p, Tex.Name, (int)Tex.LOD);
             else
-                arts_sprintf(buffer, "%s/%s.dds", path, Tex.Name);
+                std::snprintf(buffer, sizeof(buffer), "%s/%s.dds", *p, Tex.Name);
 
             if (FileSystem::PagerInfoAny(buffer, pager_))
+            {
+                found = true;
                 break;
+            }
+        }
 
-            path += std::strlen(path) + 1;
-        } while (*path);
-
-        if (pager_.Handle)
+        if (found)
+        {
             Surface = arnew agiSurfaceDesc();
+        }
+        else
+        {
+            /* Texture not found - skip paging */
+            pager_.Handle = 0;
+        }
     }
 
     if (page_state_ == 0 && pager_.Handle != 0)

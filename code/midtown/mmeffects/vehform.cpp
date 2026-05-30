@@ -27,6 +27,7 @@ define_dummy_symbol(mmeffects_vehform);
 #include "agiworld/texsort.h"
 #include "arts7/cullmgr.h"
 #include "mmcity/cullcity.h"
+#include "stream/fsystem.h"
 
 static mem::cmd_param PARAM_menu_refl {"menurefl"};
 
@@ -72,6 +73,12 @@ void (*mmVehicleForm::Lighter)(u8*, u32*, u32*, agiMeshSet*) {};
 
 void mmVehicleForm::SetShape(char* name, char* group, char* arg3, Vector3* offset)
 {
+    // Load per-vehicle texture sheet (VPBUG.TSH, etc.) so mesh textures resolve
+    // TEXSHEET.Load() safely handles non-existent files and duplicate loads
+    char tsh_path[64];
+    arts_sprintf(tsh_path, "mtl/%s.TSH", name);
+    TEXSHEET.Load(tsh_path);
+
     vehicle_mesh_ = GetMeshSet(name, group, offset, 0x107);
 
     if (arg3)

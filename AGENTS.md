@@ -43,19 +43,9 @@ Three layers provide fallbacks on Linux:
 
 1. **game_stubs.cpp** — Weak `__attribute__((weak))` C++ stubs (~200+ functions). No-op/zero return. Overridden by strong C++ definitions at link time (GCC/Clang).
 
-2. **game_stubs.S** — Weak assembly stubs for data symbols (margins, constants) and some jump targets. Some sizes are wrong (e.g., `UI_LEFT_MARGIN` declared as 8 bytes instead of 4).
+2. **game_stubs.S** — Weak assembly stubs for data symbols (margins, constants) and some jump targets. Some sizes are wrong (e.g., `UI_LEFT_MARGIN` declared as 8 bytes instead of 4, but overridden by the 4-byte strong C++ definition at link time).
 
 3. **Strong C++ implementations** — Override the weak stubs via normal linkage rules.
-
-### Critical: functions with ONLY weak stubs
-These are no-ops on Linux and break their respective features:
-
-| Function | File | Impact |
-|---|---|---|
-| `VehicleSelectBase::AllSetCar()` | vselect.h | Car selection logic |
-| `VehicleSelectBase::InitCarSelection()` | vselect.h | Vehicle UI initialization |
-| `VehicleSelectBase::IncCar()` | vselect.h | Next/prev car navigation |
-| `UIMenu::Update()` (weak) | game_stubs.cpp:488 | General menu updates |
 
 ### Mouse → UI pipeline
 1. SDL window event → `sdlevent.cpp` (convert to 640x480 game-space via `g_ViewportX/Y/WH`)
@@ -119,22 +109,10 @@ These are no-ops on Linux and break their respective features:
 
 ## Known Issues
 - **Buttons misplaced**: `UI_LEFT_MARGIN` kept at `0.0f` (menu.cpp:33) even though game.asm has `0.078125f`. The game.asm reconstruction may not be 100% accurate — button positions were tuned empirically from a 1376×768 screenshot rather than using the game.asm constants. If adjusting positions, use the coordinate pipeline: widget → ScaleWidget(menu_x/y/w/h) → screen_norm → pixel.
-- **game_stubs.S size errors**: `UI_LEFT_MARGIN`, `UI_LEFT_MARGIN2` declared 8 bytes instead of 4 (`.long` → 4, `.quad` → 8 mismatch)
 - **Many game features** rely on weak stubs (physics, AI, audio, network, etc.) and will not work until reimplemented
-- **Vehicle selection screen** is a placeholder: shows `veh_back` background, no car selection logic or 3D showcase
-- **Options sub-menus are placeholders**: Audio, Graphics, Controls, and About menus are simple UIMenu subclasses with only a "Done" button. Full implementations require reimplementing AudioOptions, GraphicsOptions, ControlSetup, and AboutMenu (all ARTS_IMPORT from game binary).
-- **VehicleSelectBase and Vehicle** have minimal implementations (constructors, PreSetup/PostSetup stubs) — most methods (InitCarSelection, IncCar, DecCar, SetPick, etc.) are weak no-ops
+- **Options sub-menus are placeholders**: Audio, Graphics, Controls menus are simple UIMenu subclasses with only a "Done" button. Full implementations require reimplementing AudioOptions, GraphicsOptions, ControlSetup (all ARTS_IMPORT from game binary).
+- **VehicleSelectBase and Vehicle** have minimal implementations — some methods (DecCar, etc.) are still weak no-ops
 - **Intro video** plays only if FFmpeg dev libraries are installed at build time. Probes `game/logos.avi` then `logos.avi` to handle different CWDs.
-- **Font fallback** improved: adds Comic Sans MS font name mapping; searches `FONT/` and `fonts/` dirs with case fallback; tries Linux system fonts as last resort. Unknown font names fall back to Gill Sans MT.
-
-### Text rendering pipeline
-- `mmTextNode::AddText()` — was a weak stub returning 0. Now stores font/text/position/effects in `lines_[line_count_++]`, sets `touched_ = true`, returns the line index.
-- `mmTextNode::Update()` — was a weak stub doing nothing. Now calls `asNode::Update()` then `CullMgr()->DeclareBitmap(this, text_bitmap_)` to register the text node for rendering.
-- `PUMenuBase::Update()` — was a weak stub doing nothing. Now calls `CullMgr()->DeclareBitmap(this, bg_bitmap_)` then `UIMenu::Update()`.
-
-### Video player audio
-- Added `SDL_InitSubSystem(SDL_INIT_AUDIO)` before setting up the audio stream, since the video plays before the main menu (which normally initializes audio).
-- Replaced raw-packet audio feed with FFmpeg audio codec decode + format auto-detection (U8/S16/S32/F32 float, any channels/rate).
 
 ### Vehicle/VehShowcase menus
 - Added bitmap buttons to Vehicle menu: Back (`onav_done`), Drive (`vehi_play`), Showcase (`vehi_show`), Auto (`veh_auto`).
@@ -202,6 +180,15 @@ The vehicle selection screen (`IDM_VEHICLE`, `veh_back`) 3D preview. Most C++ co
 - **Vehicle list init**: Added `mmVehList` creation + `LoadAll()` call in `mmInterface::Reset()` (`interface.cpp:231`). Was missing — original called it from game.asm startup, so `NumVehicles=0` → 3D preview never rendered.
 - **64-bit gap90 overlap fix**: `vselect.h` originally stored pointers inside `gap90[0xD8]` at 32-bit offsets (0x4C for forms, 0x50 for topSpeed, 0x54 for extra). On 64-bit, 8-byte pointer writes into adjacent 4-byte slots overlapped (forms at gap90[0x4C] wrote 8 bytes through 0x53, corrupting topSpeed at 0x50). Moved all pointers to proper member variables (`dofcs_array_`, `forms_array_`, `top_speed_array_`, `extra_array_`) plus int accessors (`current_car_`, `current_color_`, `vehicle_count_`) outside gap90 (`vselect.h:87-96`).
 - **GetMeshSet LOD suffix fallback**: Vehicle BMS files use LOD suffixes (`_H`, `_M`, `_L`, `_VL`) on the group name (e.g. `BODY_H.BMS` instead of `BODY.BMS`). `GetMeshSet()` now tries the exact name first, then falls back to `_H`, `_M`, `_L`, `_VL` in order (`getmesh.cpp:53-82`). This allows the vehicle preview to load the correct mesh.
+
+### ReadFile OVERLAPPED fix (minwin_linux.h)
+- **Root cause**: Linux `ReadFile()` compat wrapper in `code/midtown/core/minwin_linux.h:427` ignored the `OVERLAPPED` parameter and used `::read()` instead of `::pread()`. All pager reads (`PagerInfo_t::Read`) construct an `OVERLAPPED` with the correct file offset, but `ReadFile` on Linux used `::read(fd, ...)` which reads from the current seek position (typically 0 = start of AR file) instead of the correct data offset.
+- **Fix**: Use `::pread(fd, buffer, size, offset)` when `lpOverlapped` is non-null, extracting the 64-bit offset from `Offset`/`OffsetHigh`. Also fixed `WriteFile` similarly.
+- **Impact**: ALL paged resources (textures, meshes, etc.) previously read from file position 0 instead of the correct AR data offset. This caused DDS headers to contain garbage data → `BeginGfx` hit `Quitf("Invalid Format")` on every paged texture.
+
+### DDS header on 64-bit (texdef.cpp)
+- **Problem**: `agiSurfaceDesc` is 0x88 bytes on 64-bit Linux vs 0x7C on 32-bit Windows. `pager_.Read(dds_header, 0x4, sizeof(dds_header))` reads the 124-byte DDS header into a temp buffer, then field-by-field copies to the struct, accounting for different pointer sizes (8-byte vs 4-byte) between 32-bit DDS layout and 64-bit C++ layout.
+- **Fix**: Manual `memcpy` for each field group (first 8 u32s, lpLut union, ColorKeys, PixelFormat, SCaps, TextureStage) using correct offsets for both layouts.
 
 ## Big-Endian Support Notes (On Hold)
 
