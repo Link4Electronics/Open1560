@@ -139,7 +139,14 @@ The vehicle selection screen (`IDM_VEHICLE`, `veh_back`) 3D preview. Most C++ co
 - **BMS/** — Vehicle meshes with LOD suffixes (`_H`, `_M`, `_L`, `_VL`): `VPBUG/BODY_H.BMS`, `VPBUG/SHADOW_H.BMS`, `VPBUG/WHL0_H.BMS`, etc. Also building backdrop meshes.
 - **MTL/** — Texture sheets: `GLOBAL.TSH` (global), `VPBUG.TSH`, `VPSEMI.TSH`, etc. + `MATERIAL.DB`, `PHYSICS.DB`, `TEXTURE.DB`
 - **TEX16A/** / **TEX16O/** / **TEXP/** — Vehicle texture DDS files (for OpenGL and software renderers)
+
+**ui.ar**
 - **TUNE/** — Vehicle `.INFO` files (BEETLE, BUS, CADDI, CHICAGO, COP, F350, FASTBACK, MUSTANG99, PANOZGT, ROADSTER, SEMI) and CSV tune files
+
+**audio.ar**
+
+**1560.ar**
+ttf fonts
 
 **Limiting factors for 3D preview:**
 1. `GetMeshSet()` in `getmesh.cpp` was missing LOD suffix fallback. Vehicle BMS files use `_H`/`_M`/`_L`/`_VL` suffixes (e.g. `BODY_H.BMS`), but `GetMeshSet` was looking for `BODY.BMS` (no suffix). **Fixed**: now tries exact name, then `_H`, `_M`, `_L`, `_VL` in order (`getmesh.cpp:53-82`).
