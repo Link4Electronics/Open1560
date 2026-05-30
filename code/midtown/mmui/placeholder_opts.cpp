@@ -37,7 +37,7 @@ AudioOptionMenu::AudioOptionMenu(i32 menu_id)
     AssignName(LOC_TEXT("Audio Options"));
     AssignBackground("oaud_back");
 
-    AddBMButton(IDC_PLACEHOLDER_DONE, "onav_done"_xconst, UI_LEFT_MARGIN, 0.8f, 4);
+    AddBMButton(IDC_PLACEHOLDER_DONE, "onav_done"_xconst, 0.2f, 0.9f, 4);
 
     SetBstate(0);
 }
@@ -47,12 +47,13 @@ void AudioOptionMenu::PreSetup()
     prev_menu_id_ = IDM_OPTIONS;
 
     if (MenuMgr())
-        MenuMgr()->GetNavBar()->SetPrevPos(0.726f, 0.880f);
+        MenuMgr()->GetNavBar()->TurnOffPrev();
 }
 
 void AudioOptionMenu::PostSetup()
 {
-    MenuMgr()->GetNavBar()->SetPrevPos(0.0f, 0.0f);
+    if (MenuMgr())
+        MenuMgr()->GetNavBar()->TurnOnPrev();
 }
 
 // ── GraphicsOptionMenu ───────────────────────────────────────────
@@ -63,7 +64,7 @@ GraphicsOptionMenu::GraphicsOptionMenu(i32 menu_id)
     AssignName(LOC_TEXT("Graphics Options"));
     AssignBackground("ogra_back");
 
-    AddBMButton(IDC_PLACEHOLDER_DONE, "onav_done"_xconst, UI_LEFT_MARGIN, 0.8f, 4);
+    AddBMButton(IDC_PLACEHOLDER_DONE, "onav_done"_xconst, 0.2f, 0.9f, 4);
 
     SetBstate(0);
 }
@@ -73,12 +74,13 @@ void GraphicsOptionMenu::PreSetup()
     prev_menu_id_ = IDM_OPTIONS;
 
     if (MenuMgr())
-        MenuMgr()->GetNavBar()->SetPrevPos(0.726f, 0.880f);
+        MenuMgr()->GetNavBar()->TurnOffPrev();
 }
 
 void GraphicsOptionMenu::PostSetup()
 {
-    MenuMgr()->GetNavBar()->SetPrevPos(0.0f, 0.0f);
+    if (MenuMgr())
+        MenuMgr()->GetNavBar()->TurnOnPrev();
 }
 
 // ── ControlOptionMenu ────────────────────────────────────────────
@@ -89,7 +91,7 @@ ControlOptionMenu::ControlOptionMenu(i32 menu_id)
     AssignName(LOC_TEXT("Controls Options"));
     AssignBackground("ocon_back");
 
-    AddBMButton(IDC_PLACEHOLDER_DONE, "onav_done"_xconst, UI_LEFT_MARGIN, 0.8f, 4);
+    AddBMButton(IDC_PLACEHOLDER_DONE, "onav_done"_xconst, 0.2f, 0.9f, 4);
 
     SetBstate(0);
 }
@@ -99,12 +101,13 @@ void ControlOptionMenu::PreSetup()
     prev_menu_id_ = IDM_OPTIONS;
 
     if (MenuMgr())
-        MenuMgr()->GetNavBar()->SetPrevPos(0.726f, 0.880f);
+        MenuMgr()->GetNavBar()->TurnOffPrev();
 }
 
 void ControlOptionMenu::PostSetup()
 {
-    MenuMgr()->GetNavBar()->SetPrevPos(0.0f, 0.0f);
+    if (MenuMgr())
+        MenuMgr()->GetNavBar()->TurnOnPrev();
 }
 
 // ── AboutOptionMenu ──────────────────────────────────────────────
