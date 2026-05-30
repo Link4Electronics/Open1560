@@ -29,6 +29,7 @@ define_dummy_symbol(mmgame_interface);
 #include "eventq7/event.h"
 #include "pcwindis/dxinit.h"
 #include "agi/rsys.h"
+#include "mmui/driver.h"
 #include "mmui/main.h"
 #include "mmui/options.h"
 #include "mmui/placeholder_opts.h"
@@ -311,6 +312,44 @@ void mmInterface::Update()
                             break;
                         case IDC_OPTIONS_MENU_CREDITS:
                             MenuMgr()->Switch(IDM_ABOUT);
+                            break;
+                    }
+                }
+                // Driver menu dispatch
+                else if (menu->GetMenuID() == IDM_DRIVER)
+                {
+                    switch (widget_id)
+                    {
+                        case IDC_DRIVER_NEW:
+                        {
+                            auto* driver = static_cast<DriverMenu*>(menu);
+                            driver->NewPlayer();
+                            MenuMgr()->Switch(IDM_DRIVER);
+                            break;
+                        }
+                        case IDC_DRIVER_DELETE:
+                        {
+                            auto* driver = static_cast<DriverMenu*>(menu);
+                            driver->DeleteCB();
+                            break;
+                        }
+                        case IDC_DRIVER_STATS:
+                            // TODO: Open driver records dialog (IDD_DREC)
+                            break;
+                        case IDC_DRIVER_PREV:
+                        {
+                            auto* driver = static_cast<DriverMenu*>(menu);
+                            driver->DecPlayer();
+                            break;
+                        }
+                        case IDC_DRIVER_NEXT:
+                        {
+                            auto* driver = static_cast<DriverMenu*>(menu);
+                            driver->IncPlayer();
+                            break;
+                        }
+                        case IDC_DRIVER_SELECT:
+                            MenuMgr()->Switch(IDM_RACE);
                             break;
                     }
                 }

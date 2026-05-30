@@ -20,52 +20,44 @@
 
 #include "mmwidget/menu.h"
 
+class mmTextNode;
+
+enum
+{
+    IDC_DRIVER_NEW = 50,
+    IDC_DRIVER_DELETE = 51,
+    IDC_DRIVER_STATS = 52,
+    IDC_DRIVER_PREV = 53,
+    IDC_DRIVER_NEXT = 54,
+    IDC_DRIVER_SELECT = 9999,
+};
+
 class DriverMenu final : public UIMenu
 {
 public:
-    // ??0DriverMenu@@QAE@H@Z
-    ARTS_IMPORT DriverMenu(i32 arg1);
+    DriverMenu(i32 menu_id);
+    ~DriverMenu() override = default;
 
-    // ??1DriverMenu@@UAE@XZ
-    ARTS_IMPORT ~DriverMenu() override;
-
-    // ?AddPlayer@DriverMenu@@QAEXPAD@Z
-    ARTS_IMPORT void AddPlayer(char* arg1);
-
-    // ?DeleteCB@DriverMenu@@QAEXXZ
-    ARTS_IMPORT void DeleteCB();
-
-    // ?DisplayDriverInfo@DriverMenu@@QAEXPAD0000H@Z
-    ARTS_IMPORT void DisplayDriverInfo(char* arg1, char* arg2, char* arg3, char* arg4, char* arg5, i32 arg6);
-
-    // ?InitPlayerSelection@DriverMenu@@QAEXXZ
-    ARTS_IMPORT void InitPlayerSelection();
-
-    // ?NewPlayer@DriverMenu@@QAEXXZ | unused
+    void AddPlayer(char* name);
+    void DeleteCB();
+    void DecPlayer();
+    void DisplayDriverInfo(char* ranking, char* last_race, char* last_vehicle, char* controller, char* netname, i32 score);
+    void IncPlayer();
+    void InitPlayerSelection();
     void NewPlayer();
+    void PreSetup() override;
+    void PostSetup() override;
+    void RemoveAllPlayers();
+    void RemovePlayer(char* name);
+    void SetController(char* name);
+    void SetNetName(char* name);
+    void SetPlayerPick(i32 index);
+    void TDPickCB();
 
-    // ?PreSetup@DriverMenu@@UAEXXZ
-    ARTS_IMPORT void PreSetup() override;
-
-    // ?RemoveAllPlayers@DriverMenu@@QAEXXZ
-    ARTS_IMPORT void RemoveAllPlayers();
-
-    // ?RemovePlayer@DriverMenu@@QAEXPAD@Z
-    ARTS_IMPORT void RemovePlayer(char* arg1);
-
-    // ?SetController@DriverMenu@@QAEXPAD@Z
-    ARTS_IMPORT void SetController(char* arg1);
-
-    // ?SetNetName@DriverMenu@@QAEXPAD@Z
-    ARTS_IMPORT void SetNetName(char* arg1);
-
-    // ?SetPlayerPick@DriverMenu@@QAEXH@Z
-    ARTS_IMPORT void SetPlayerPick(i32 arg1);
-
-    // ?TDPickCB@DriverMenu@@QAEXXZ
-    ARTS_IMPORT void TDPickCB();
-
-    u8 gap90[0x9C];
+private:
+    char default_name_[40] {"DriverX"};
+    i32 current_player_ {-1};
+    char controller_name_[80] {};
+    char net_name_[80] {};
+    mmTextNode* info_text_ {nullptr};
 };
-
-check_size(DriverMenu, 0x12C);
