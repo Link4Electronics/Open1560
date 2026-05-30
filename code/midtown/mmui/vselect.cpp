@@ -21,6 +21,8 @@ define_dummy_symbol(mmui_vselect);
 #include "vselect.h"
 
 #include "agi/pipeline.h"
+#include "agi/viewport.h"
+#include "arts7/sim.h"
 #include "arts7/camera.h"
 #include "arts7/dof.h"
 #include "core/primitives.h"
@@ -53,6 +55,22 @@ void VehicleSelectBase::Reset()
 void VehicleSelectBase::PostSetup()
 {}
 
+static void LoadCarMesh(VehicleSelectBase* base, i32 car)
+{
+    mmVehicleForm* forms = base->GetVehicleFormArray();
+    if (!forms || forms[car].HasMesh())
+        return;
+
+    mmVehInfo* info = VehicleListPtr ? VehicleListPtr->GetVehicleInfo(car) : nullptr;
+    if (!info || !info->IsValid())
+        return;
+
+    Vector3 offset(0.0f, 0.0f, 0.0f);
+    char body[] = "BODY";
+    char shadow[] = "SHADOW";
+    forms[car].SetShape(info->BaseName, body, shadow, &offset);
+}
+
 void VehicleSelectBase::PreSetup()
 {
     // Update locked label if difficulty changed (affects which vehicles are locked/unlocked)
@@ -64,13 +82,16 @@ void VehicleSelectBase::PreSetup()
         SetLockedLabel();
     }
 
-    // Activate current car's DofCS node (set node_flags_ bit 0)
+    // Activate current car's DofCS node (set NODE_FLAG_ACTIVE)
     asDofCS* dofcs = GetDofCSArray();
     i32 car = CurrentCar();
     if (dofcs)
     {
-        *reinterpret_cast<i32*>(reinterpret_cast<char*>(&dofcs[car]) + 0x18) |= 1;
+        dofcs[car].SetNodeFlag(NODE_FLAG_ACTIVE);
     }
+
+    // Load mesh for current car if not already loaded
+    LoadCarMesh(this, car);
 
     // Set viewport on camera
     if (asCamera* camera = MenuMgr()->GetCamera())
@@ -86,6 +107,98 @@ void VehicleSelectBase::PreSetup()
 void VehicleSelectBase::Update()
 {
     UIMenu::Update();
+
+    mmVehicleForm* forms = GetVehicleFormArray();
+    asDofCS* dofcs = GetDofCSArray();
+    if (!forms || !dofcs)
+        return;
+
+    i32 car = CurrentCar();
+    i32 count = VehicleListPtr ? VehicleListPtr->NumVehicles : 0;
+    if (car < 0 || car >= count)
+        return;
+
+    if (!forms[car].HasMesh())
+        return;
+
+    // Update DofCS to compute World matrix from animation + position
+    dofcs[car].Update();
+
+    // Position the car in front of the camera
+    dofcs[car].World.m3 = Vector3(0.0f, 40.0f, -250.0f);
+
+    // Push DofCS transform so form Update captures the car's position
+    Sim()->PushFrame(&dofcs[car]);
+    forms[car].Update();
+    Sim()->PopFrame();
+
+    // ---- Vehicle Preview Rendering ----
+
+    agiViewport* vp = Viewport();
+    if (!vp)
+        return;
+
+    agiViewParameters& params = vp->GetParams();
+
+    // Set up perspective projection
+    f32 fov = 45.0f * (3.14159265f / 180.0f);
+    f32 pipe_w = static_cast<f32>(Pipe() ? Pipe()->GetWidth() : 640);
+    f32 pipe_h = static_cast<f32>(Pipe() ? Pipe()->GetHeight() : 480);
+    f32 vp_w = params.Width * pipe_w;
+    f32 vp_h = params.Height * pipe_h;
+    f32 aspect = (vp_w > 0.0f && vp_h > 0.0f) ? vp_w / vp_h : 1.0f;
+    f32 near_ = 10.0f;
+    f32 far_ = 2000.0f;
+    f32 cot_half_fov = 1.0f / tanf(fov * 0.5f);
+
+    params.ProjX = cot_half_fov;
+    params.ProjY = cot_half_fov / aspect;
+    params.ProjZZ = far_ / (far_ - near_);
+    params.ProjZW = -near_ * far_ / (far_ - near_);
+    params.ProjXZ = 0.0f;
+    params.ProjYZ = 0.0f;
+
+    // Camera look-at: camera at (0, 40, 300) looking at car at (0, 40, -250)
+    Vector3 eye(0.0f, 40.0f, 300.0f);
+    Vector3 target(0.0f, 40.0f, -250.0f);
+    Vector3 fwd = eye - target;
+    f32 inv_mag = fwd.InvMag();
+    fwd.x *= inv_mag;
+    fwd.y *= inv_mag;
+    fwd.z *= inv_mag;
+
+    Vector3 right;
+    right.Cross(Vector3(0.0f, 1.0f, 0.0f), fwd);
+    f32 right_inv = right.InvMag();
+    right.x *= right_inv;
+    right.y *= right_inv;
+    right.z *= right_inv;
+
+    Vector3 up;
+    up.Cross(fwd, right);
+
+    f32 right_dot_eye = right.x * eye.x + right.y * eye.y + right.z * eye.z;
+    f32 up_dot_eye = up.x * eye.x + up.y * eye.y + up.z * eye.z;
+    f32 fwd_dot_eye = fwd.x * eye.x + fwd.y * eye.y + fwd.z * eye.z;
+
+    // Camera matrix (world-space position + orientation)
+    params.Camera.m0 = right;
+    params.Camera.m1 = up;
+    params.Camera.m2 = fwd;
+    params.Camera.m3 = eye;
+
+    // View matrix = Camera.Inverse() (world → view)
+    params.View.m0 = Vector3(right.x, up.x, fwd.x);
+    params.View.m1 = Vector3(right.y, up.y, fwd.y);
+    params.View.m2 = Vector3(right.z, up.z, fwd.z);
+    params.View.m3 = Vector3(-right_dot_eye, -up_dot_eye, -fwd_dot_eye);
+
+    // Set World and compute ModelView = View * World
+    params.SetWorld(dofcs[car].World);
+
+    // Render the vehicle directly (bypasses the non-functional CullMgr)
+    forms[car].SetColor(0x00FFFFFF);
+    forms[car].Cull();
 }
 
 void VehicleSelectBase::InitCarSelection(i32 mode, f32 x, f32 y, f32 w, f32 h)
@@ -123,7 +236,9 @@ void VehicleSelectBase::InitCarSelection(i32 mode, f32 x, f32 y, f32 w, f32 h)
             *reinterpret_cast<i32*>(mem) = count;
             asDofCS* dofcs = reinterpret_cast<asDofCS*>(mem + 4);
             for (i32 i = 0; i < count; ++i)
+            {
                 new (&dofcs[i]) asDofCS();
+            }
             SetDofCSArray(dofcs);
         }
     }

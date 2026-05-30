@@ -49,6 +49,10 @@ public:
     // ?SphMapTex@mmVehicleForm@@2PAVagiTexDef@@A
     ARTS_IMPORT static agiTexDef* SphMapTex;
 
+    bool HasMesh() const { return vehicle_mesh_ != nullptr; }
+
+    void SetColor(i32 c) { color_index_ = c; }
+
 private:
     agiMeshSet* vehicle_mesh_ {};
     agiMeshSet* shadow_mesh_ {};

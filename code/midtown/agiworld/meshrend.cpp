@@ -1776,3 +1776,108 @@ void agiMeshSet::DrawWideLines(Vector3* starts, Vector3* ends, f32* widths, u32*
         agiCurState.SetCullMode(old_cull);
     }
 }
+
+void ARTS_FASTCALL agiMeshSet::Init(i32 /*flags*/)
+{
+    agiViewParameters& params = const_cast<agiViewParameters&>(ViewParams());
+    InitViewport(params);
+    InitMtx(params, 0);
+    EyePos = params.Camera.m3;
+    EyePlaneCount = 0;
+}
+
+void ARTS_FASTCALL agiMeshSet::InitMtx(agiViewParameters& params, i32 /*flags*/)
+{
+    const Matrix34& mv = params.ModelView;
+
+    M.m0.x = mv.m0.x * params.ProjX;
+    M.m0.y = mv.m0.y * params.ProjY;
+    M.m0.z = -mv.m0.z;
+
+    M.m1.x = mv.m1.x * params.ProjX;
+    M.m1.y = mv.m1.y * params.ProjY;
+    M.m1.z = -mv.m1.z;
+
+    M.m2.x = mv.m2.x * params.ProjX;
+    M.m2.y = mv.m2.y * params.ProjY;
+    M.m2.z = -mv.m2.z;
+
+    M.m3.x = mv.m3.x * params.ProjX;
+    M.m3.y = mv.m3.y * params.ProjY;
+    M.m3.z = -mv.m3.z;
+
+    ProjZZ = params.ProjZZ;
+    ProjZW = params.ProjZW;
+
+    ++MtxSerial;
+    ++ViewSerial;
+}
+
+void agiMeshSet::FirstPass_HW_UV_CPV_noDYNTEX(u32* colors, Vector2* tex_coords, u32 /*color*/)
+{
+    ARTS_UTIMED(agiFirstPass);
+
+    for (u32 t = 0; t <= TextureCount; ++t)
+    {
+        i16 nv = vertCounts[t];
+        if (nv <= 0)
+            continue;
+
+        agiCurState.SetTexture(t < TextureCount ? *Textures[t] : nullptr);
+
+        agiScreenVtx* verts = ARTS_ALLOCA(agiScreenVtx, nv);
+        u16* indices = ARTS_ALLOCA(u16, indexCounts[t]);
+
+        u32 vi = 0;
+        u32 ii = 0;
+        u32 base = 0;
+
+        for (i16 facet = firstFacet[t]; facet != -1; facet = nextFacet[facet])
+        {
+            const u16* surface = &SurfaceIndices[facet * 4];
+            u32 count = surface[3] ? 4 : 3;
+
+            for (u32 j = 0; j < count; ++j)
+            {
+                u16 idx = VertexIndices[surface[j]];
+                const Vector4& pos = out[idx];
+
+                verts[vi].x = pos.x;
+                verts[vi].y = pos.y;
+                verts[vi].z = pos.z;
+                verts[vi].w = pos.w;
+                verts[vi].color = colors[idx];
+                verts[vi].specular = 0xFF000000;
+                verts[vi].tu = tex_coords[idx].x;
+                verts[vi].tv = tex_coords[idx].y;
+
+                ++vi;
+            }
+
+            if (count == 4)
+            {
+                indices[ii++] = base + 0;
+                indices[ii++] = base + 1;
+                indices[ii++] = base + 2;
+                indices[ii++] = base + 0;
+                indices[ii++] = base + 2;
+                indices[ii++] = base + 3;
+            }
+            else
+            {
+                indices[ii++] = base + 0;
+                indices[ii++] = base + 1;
+                indices[ii++] = base + 2;
+            }
+
+            base += count;
+        }
+
+        if (nv > 0)
+        {
+            ++STATS.Tris;
+            ++STATS.GeomCalls;
+            RAST->Mesh(agiVtxType::Screen, (agiVtx*) verts, nv, indices, ii);
+        }
+    }
+}
