@@ -50,18 +50,33 @@ agiMeshSet* GetMeshSet(aconst char* name, aconst char* group, Vector3* offset, i
 
     MeshCurrentObject = full_name;
 
+    // Try exact match, then LOD suffixes (_H, _M, _L, _VL)
+    static const char* const lod_suffixes[] = {"", "_H", "_M", "_L", "_VL"};
+
     char bms_path[256];
-    arts_sprintf(bms_path, "bms/%s", name);
+    Owner<Stream> stream;
 
-    if (group)
+    for (usize si = 0; si < ARTS_SIZE(lod_suffixes); ++si)
     {
-        arts_strcat(bms_path, "/");
-        arts_strcat(bms_path, group);
+        const char* suffix = lod_suffixes[si];
+
+        if (group)
+            arts_sprintf(bms_path, "bms/%s/%s%s.bms", name, group, suffix);
+        else
+            arts_sprintf(bms_path, "bms/%s%s.bms", name, suffix);
+
+        stream = FileSystem::OpenAny(bms_path, true, nullptr, 0);
+
+        if (stream)
+        {
+            if (suffix[0] != '\0')
+            {
+                arts_strcat(full_name, suffix);
+                MeshCurrentObject = full_name;
+            }
+            break;
+        }
     }
-
-    arts_strcat(bms_path, ".bms");
-
-    Owner<Stream> stream = FileSystem::OpenAny(bms_path, true, nullptr, 0);
 
     if (!stream)
         return nullptr;

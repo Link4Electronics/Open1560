@@ -142,29 +142,38 @@ These are no-ops on Linux and break their respective features:
 - Removed broken `Showcases.SubString(CurrentCar+1)` background in VehShowcase -- now uses `"veh_back"` directly.
 - Added VehShowcase dispatch (returns to Vehicle menu).
 
-### 3D Vehicle Preview — Missing Pipeline
-The vehicle selection screen (`IDM_VEHICLE`, `veh_back`) shows no 3D car. The full chain needs:
+### 3D Vehicle Preview — Pipeline Status
+The vehicle selection screen (`IDM_VEHICLE`, `veh_back`) 3D preview. Most C++ components are now strong implementations:
 
-| Layer | Component | Stub | File | Impact |
-|---|---|---|---|---|
-| 1 | `mmVehInfo::Load(char*)` | Weak ASM (returns 0) | `game_stubs.S:7329` | No `.info` files parsed → `NumVehicles = 0` |
-| 2 | `mmVehInfo::mmVehInfo()` | Weak C++ (empty) | `game_stubs.cpp:1139` | vtable not set, no zero-init |
-| 3 | `mmVehicleForm::SetShape()` | Weak C++ (no-op) | `vehform.cpp:72` | Never calls `GetMeshSet()`, `vehicle_mesh_` stays null |
-| 4 | `mmVehicleForm::Cull()` | Weak C++ (no-op) | `vehform.cpp:80` | No rendering code |
-| 5 | `GetMeshSet()` | Weak ASM (returns null) | `game_stubs.S:2168` | Core mesh loader → nothing loads |
-| 6 | `TEXSHEET.Load(const char*)` | Weak ASM (no-op) | `game_stubs.S:3447` | `mtl/global.tsh` never loaded → texture system dead |
-| 7 | `TEXSHEET.Lookup/GetVariationCount/RemapName` | All weak stubs | `game_stubs.cpp:574-578` | Texture lookup broken |
-| 8 | `VehicleSelectBase::SetPick()` | Weak C++ (no-op) | `vselect.cpp:197` | Car selection logic missing |
+| Layer | Component | Status | File |
+|---|---|---|---|
+| 1 | `mmVehInfo::Load(char*)` | ✅ Strong impl | `vehinfo.cpp:34` |
+| 2 | `mmVehInfo::mmVehInfo()` | ✅ Strong impl | `vehinfo.cpp:29` |
+| 3 | `mmVehicleForm::SetShape()` | ✅ Strong impl | `vehform.cpp:73` |
+| 4 | `mmVehicleForm::Cull()` | ✅ Strong impl | `vehform.cpp:81` |
+| 5 | `GetMeshSet()` | ✅ Strong impl | `getmesh.cpp:38` |
+| 6 | `TEXSHEET.Load(const char*)` | ✅ Strong impl | `texsheet.cpp:96` |
+| 7 | `TEXSHEET.Lookup/GetVariationCount` | ✅ Strong impl | `texsheet.cpp:246-325` |
+| 8 | `VehicleSelectBase::SetPick()` | ✅ Strong impl | `vselect.cpp:374` |
+| 9 | `VehicleSelectBase::Update()` | ✅ Renders camera+mesh | `vselect.cpp:139` |
 
-**Vehicle data flow:**
-- `.info` files stored in AR archives as `tune/*.info` (e.g. `tune/BEETLE.INFO`)
+**core.ar** (91 MB, loaded first via `mods.txt`) contains all vehicle data:
+- **BMS/** — Vehicle meshes with LOD suffixes (`_H`, `_M`, `_L`, `_VL`): `VPBUG/BODY_H.BMS`, `VPBUG/SHADOW_H.BMS`, `VPBUG/WHL0_H.BMS`, etc. Also building backdrop meshes.
+- **MTL/** — Texture sheets: `GLOBAL.TSH` (global), `VPBUG.TSH`, `VPSEMI.TSH`, etc. + `MATERIAL.DB`, `PHYSICS.DB`, `TEXTURE.DB`
+- **TEX16A/** / **TEX16O/** / **TEXP/** — Vehicle texture DDS files (for OpenGL and software renderers)
+- **TUNE/** — Vehicle `.INFO` files (BEETLE, BUS, CADDI, CHICAGO, COP, F350, FASTBACK, MUSTANG99, PANOZGT, ROADSTER, SEMI) and CSV tune files
+
+**Limiting factors for 3D preview:**
+1. `GetMeshSet()` in `getmesh.cpp` was missing LOD suffix fallback. Vehicle BMS files use `_H`/`_M`/`_L`/`_VL` suffixes (e.g. `BODY_H.BMS`), but `GetMeshSet` was looking for `BODY.BMS` (no suffix). **Fixed**: now tries exact name, then `_H`, `_M`, `_L`, `_VL` in order (`getmesh.cpp:53-82`).
+2. Sound files — `audio.ar` is empty
+
+**Vehicle data flow (for reference when data is available):**
+- `.info` files: `tune/*.info` (e.g. `tune/BEETLE.INFO`)
 - Format: `BaseName=vpbug`, `Description=...`, `Colors=...`, `Flags=%d`, `Order=%d`, `ScoringBias=%f`, `Horsepower=%d`, `Top Speed=%d`, `Durability=%d`, `Mass=%d`
 - Default vehicle: `"vpbug"` (VW New Beetle)
 - Geometry: `bms/<name>[/<group>].bms` loaded via `GetMeshSet(name, group, offset, flags)`
 - Textures: `mtl/<name>.tsh` and `mtl/global.tsh` loaded via TEXSHEET
 - BMS file format: `u32 magic(0x4D534833 "MSH3")` + `Vector3 bounds` + BinaryLoad data
-- The `giMeshSet::BinaryLoad()` and rendering pipeline are already implemented in `agiworld/`
-- TEXSHEET is a weak object (uninitialized) — needs strong implementation for texture lookups
 
 ## Previously Fixed
 - `mmInterface::SetNavigationOrders()` — added to interface.cpp for widget tab ordering
@@ -191,6 +200,8 @@ The vehicle selection screen (`IDM_VEHICLE`, `veh_back`) shows no 3D car. The fu
 - **Scrolling credits on About screen**: Loads `ABOUT_CRED` (ui.ar) or fallback `CREDITS` bitmap. Scrolls at 50 px/s after 1.5s delay. Overrides `Update()` (computes scroll, calls `CullMgr()->DeclareBitmap`) and `Cull()` (renders wrapped CopyBitmap in two parts if scrolled past end). Positioned at screen `(0.1*w, 0.1*h)` with visible height `0.5*h` matching original hotspot `(0.1, 0.1, 0.5, 0.5)`.
 - **About credits position + direction**: Fixed position to use screen-normalized coords after ScaleWidget `(0.1915, 0.1555, 0.4275)`. Reversed scroll direction: scrolls DOWN instead of UP (renders at `src_y = height - scroll - vis_h` to move window downward through image).
 - **Vehicle list init**: Added `mmVehList` creation + `LoadAll()` call in `mmInterface::Reset()` (`interface.cpp:231`). Was missing — original called it from game.asm startup, so `NumVehicles=0` → 3D preview never rendered.
+- **64-bit gap90 overlap fix**: `vselect.h` originally stored pointers inside `gap90[0xD8]` at 32-bit offsets (0x4C for forms, 0x50 for topSpeed, 0x54 for extra). On 64-bit, 8-byte pointer writes into adjacent 4-byte slots overlapped (forms at gap90[0x4C] wrote 8 bytes through 0x53, corrupting topSpeed at 0x50). Moved all pointers to proper member variables (`dofcs_array_`, `forms_array_`, `top_speed_array_`, `extra_array_`) plus int accessors (`current_car_`, `current_color_`, `vehicle_count_`) outside gap90 (`vselect.h:87-96`).
+- **GetMeshSet LOD suffix fallback**: Vehicle BMS files use LOD suffixes (`_H`, `_M`, `_L`, `_VL`) on the group name (e.g. `BODY_H.BMS` instead of `BODY.BMS`). `GetMeshSet()` now tries the exact name first, then falls back to `_H`, `_M`, `_L`, `_VL` in order (`getmesh.cpp:53-82`). This allows the vehicle preview to load the correct mesh.
 
 ## Big-Endian Support Notes (On Hold)
 

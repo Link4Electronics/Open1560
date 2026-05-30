@@ -69,13 +69,18 @@ static void LoadCarMesh(VehicleSelectBase* base, i32 car)
         return;
 
     Vector3 offset(0.0f, 0.0f, 0.0f);
-    char body[] = "BODY";
-    char shadow[] = "SHADOW";
-    forms[car].SetShape(info->BaseName, body, shadow, &offset);
+    forms[car].SetShape(info->BaseName, const_cast<char*>("BODY"), const_cast<char*>("SHADOW"), &offset);
 }
 
 void VehicleSelectBase::PreSetup()
 {
+    mmVehicleForm* forms = GetVehicleFormArray();
+    i32 car = CurrentCar();
+
+    // Safety: guard against uninitialized forms
+    if (!forms)
+        return;
+
     // Update locked label if difficulty changed (affects which vehicles are locked/unlocked)
     i32 stored_diff = *reinterpret_cast<i32*>(&gap90[0xD4]);
     i32 cur_diff = static_cast<i32>(MMCURRPLAYER.Difficulty);
@@ -87,7 +92,6 @@ void VehicleSelectBase::PreSetup()
 
     // Activate current car's DofCS node (set NODE_FLAG_ACTIVE)
     asDofCS* dofcs = GetDofCSArray();
-    i32 car = CurrentCar();
     if (dofcs)
     {
         dofcs[car].SetNodeFlag(NODE_FLAG_ACTIVE);
@@ -225,8 +229,8 @@ void VehicleSelectBase::InitCarSelection(i32 mode, f32 x, f32 y, f32 w, f32 h)
     *reinterpret_cast<f32*>(&gap90[0x90]) = 1.0f - (y + h); // RightOffset at 0x120
 
     // Reset state
-    *reinterpret_cast<i32*>(&gap90[0x00]) = 0;  // CurrentCar
-    *reinterpret_cast<i32*>(&gap90[0x0C]) = 0;  // SomeIndex
+    SetCurrentCar(0);
+    *reinterpret_cast<i32*>(&gap90[0x0C]) = 0;  // SomeIndex (still i32, safe in gap90)
 
     if (count <= 0)
         return;
@@ -239,9 +243,7 @@ void VehicleSelectBase::InitCarSelection(i32 mode, f32 x, f32 y, f32 w, f32 h)
             *reinterpret_cast<i32*>(mem) = count;
             asDofCS* dofcs = reinterpret_cast<asDofCS*>(mem + 4);
             for (i32 i = 0; i < count; ++i)
-            {
                 new (&dofcs[i]) asDofCS();
-            }
             SetDofCSArray(dofcs);
         }
     }
@@ -261,7 +263,7 @@ void VehicleSelectBase::InitCarSelection(i32 mode, f32 x, f32 y, f32 w, f32 h)
 
     // Allocate int data arrays
     SetTopSpeedArray(static_cast<i32*>(arts_operator_new(count * sizeof(i32))));
-    *reinterpret_cast<i32**>(&gap90[0x54]) = static_cast<i32*>(arts_operator_new(count * sizeof(i32)));
+    SetExtraArray(static_cast<i32*>(arts_operator_new(count * sizeof(i32))));
 
     // Create prev/next vehicle buttons
     f32 button_y = 1.0f - (y + h) + h;

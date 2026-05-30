@@ -56,27 +56,43 @@ public:
     ARTS_IMPORT void TDPickCB();
     ARTS_IMPORT void Update() override;
 
-    i32 CurrentCar() const { return *reinterpret_cast<const i32*>(&gap90[0x00]); }
-    i32 CurrentColor() const { return *reinterpret_cast<const i32*>(&gap90[0x04]); }
-    i32 VehicleCount() const { return *reinterpret_cast<const i32*>(&gap90[0x08]); }
+    i32 CurrentCar() const { return current_car_; }
+    i32 CurrentColor() const { return current_color_; }
+    i32 VehicleCount() const { return vehicle_count_; }
 
-    void SetCurrentCar(i32 v) { *reinterpret_cast<i32*>(&gap90[0x00]) = v; }
-    void SetCurrentColor(i32 v) { *reinterpret_cast<i32*>(&gap90[0x04]) = v; }
+    void SetCurrentCar(i32 v) { current_car_ = v; }
+    void SetCurrentColor(i32 v) { current_color_ = v; }
 
-    asDofCS* GetDofCSArray() const { return *reinterpret_cast<asDofCS* const*>(&gap90[0x3C]); }
-    void SetDofCSArray(asDofCS* v) { *reinterpret_cast<asDofCS**>(&gap90[0x3C]) = v; }
+    asDofCS* GetDofCSArray() const { return dofcs_array_; }
+    void SetDofCSArray(asDofCS* v) { dofcs_array_ = v; }
 
-    mmVehicleForm* GetVehicleFormArray() const { return *reinterpret_cast<mmVehicleForm* const*>(&gap90[0x4C]); }
-    void SetVehicleFormArray(mmVehicleForm* v) { *reinterpret_cast<mmVehicleForm**>(&gap90[0x4C]) = v; }
+    mmVehicleForm* GetVehicleFormArray() const { return forms_array_; }
+    void SetVehicleFormArray(mmVehicleForm* v) { forms_array_ = v; }
 
-    i32* GetTopSpeedArray() const { return *reinterpret_cast<i32* const*>(&gap90[0x50]); }
-    void SetTopSpeedArray(i32* v) { *reinterpret_cast<i32**>(&gap90[0x50]) = v; }
+    i32* GetTopSpeedArray() const { return top_speed_array_; }
+    void SetTopSpeedArray(i32* v) { top_speed_array_ = v; }
 
-    i32 GetUnlockLevel() const { return *reinterpret_cast<const i32*>(&gap90[0xD4]); }
-    void SetUnlockLevel(i32 v) { *reinterpret_cast<i32*>(&gap90[0xD4]) = v; }
+    i32* GetExtraArray() const { return extra_array_; }
+    void SetExtraArray(i32* v) { extra_array_ = v; }
+
+    i32 GetUnlockLevel() const { return unlock_level_; }
+    void SetUnlockLevel(i32 v) { unlock_level_ = v; }
 
 protected:
+    // gap90 stores i32/f32 fields whose positions are tied to the original 32-bit layout.
+    // Pointer-size fields (dofCS, forms, topSpeed, extraArray) are stored as proper member
+    // variables below to avoid overlaps when 32-bit 4-byte pointer slots become 8 bytes on 64-bit.
     u8 gap90[0xD8];
+
+    i32 current_car_ {};
+    i32 current_color_ {};
+    i32 vehicle_count_ {};
+
+    asDofCS* dofcs_array_ {};
+    mmVehicleForm* forms_array_ {};
+    i32* top_speed_array_ {};
+    i32* extra_array_ {};
+    i32 unlock_level_ {};
 };
 
 check_size(VehicleSelectBase, 0x168);
