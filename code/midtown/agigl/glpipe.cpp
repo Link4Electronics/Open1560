@@ -454,17 +454,7 @@ void agiGLPipeline::CopyBitmap(i32 dst_x, i32 dst_y, agiBitmap* src, i32 src_x, 
     f32 tv_low = static_cast<f32>(src_y) / static_cast<f32>(src->GetHeight());
     f32 tv_high = static_cast<f32>(src_y + height) / static_cast<f32>(src->GetHeight());
 
-    {
-        static i32 is_wayland = -1;
-        if (is_wayland < 0)
-        {
-            const char* vd = SDL_GetCurrentVideoDriver();
-            is_wayland = (vd && strcmp(vd, "wayland") == 0) ? 1 : 0;
-        }
-
-        if (is_wayland)
-            std::swap(tv_low, tv_high);
-    }
+    std::swap(tv_low, tv_high);
 
     verts[1].tv = verts[0].tv = tv_low;
     verts[1].x = verts[2].x = static_cast<f32>(dst_x + width);
@@ -522,18 +512,10 @@ void agiGLPipeline::StretchCopyBitmap(
     verts[3].tu = verts[0].tu = static_cast<f32>(src_x) * inv_tex_w;
 
     {
-        static i32 is_wayland = -1;
-        if (is_wayland < 0)
-        {
-            const char* vd = SDL_GetCurrentVideoDriver();
-            is_wayland = (vd && strcmp(vd, "wayland") == 0) ? 1 : 0;
-        }
-
         f32 tv_low = static_cast<f32>(src_y) * inv_tex_h;
         f32 tv_high = static_cast<f32>(src_y + src_h) * inv_tex_h;
 
-        if (is_wayland)
-            std::swap(tv_low, tv_high);
+        std::swap(tv_low, tv_high);
 
         verts[1].tv = verts[0].tv = tv_low;
         verts[1].x = verts[2].x = static_cast<f32>(dst_x + dst_w);

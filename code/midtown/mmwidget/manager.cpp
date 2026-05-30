@@ -615,6 +615,21 @@ void MenuManager::Disable(i32 id)
         menus_[index]->Disable();
 }
 
+void MenuManager::DisableNavBar()
+{
+    if (nav_bar_)
+        nav_bar_->DeactivateNode();
+}
+
+void MenuManager::EnableNavBar()
+{
+    if (nav_bar_)
+    {
+        nav_bar_->ActivateNode();
+        nav_bar_->TurnOnPrev();
+    }
+}
+
 void MenuManager::Kill()
 {
     event_q_ = nullptr;

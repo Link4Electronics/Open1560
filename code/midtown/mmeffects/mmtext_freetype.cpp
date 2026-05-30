@@ -477,20 +477,20 @@ mmFont* mmFont::Create(const char* font_name, i32 height, i32 weight)
 
     if (!std::strcmp(font_name, "Broadway"))
     {
-        ttf_name = "BROADW.TTF";
+        ttf_name = "BROADW";
     }
     else if (!std::strcmp(font_name, "Gill Sans MT"))
     {
-        ttf_name = (weight >= 700) ? "GILB____.TTF" : "GIL_____.TTF";
+        ttf_name = (weight >= 700) ? "GILB____" : "GIL_____";
     }
     else if (!std::strcmp(font_name, "Comic Sans MS"))
     {
-        ttf_name = (weight >= 700) ? "COMICBD.TTF" : "COMIC.TTF";
+        ttf_name = (weight >= 700) ? "COMICBD" : "COMIC";
     }
     else
     {
         // Unknown font - fall back to Gill Sans
-        ttf_name = "GIL_____.TTF";
+        ttf_name = "GIL_____";
     }
 
     Ptr<Stream> file = nullptr;
@@ -507,9 +507,20 @@ mmFont* mmFont::Create(const char* font_name, i32 height, i32 weight)
 
     const char* search_dirs[] = {"FONT/", "fonts/"};
 
+    auto try_name = [&](const char* dir, const char* name) -> bool
+    {
+        if (try_font(dir, name))
+            return true;
+
+        // Also try with .TTF extension (host filesystem TTF files)
+        char with_ext[260];
+        arts_snprintf(with_ext, sizeof(with_ext), "%s.TTF", name);
+        return try_font(dir, with_ext);
+    };
+
     for (const char* dir : search_dirs)
     {
-        if (try_font(dir, ttf_name))
+        if (try_name(dir, ttf_name))
             break;
 
         char lower[256];
@@ -518,7 +529,7 @@ mmFont* mmFont::Create(const char* font_name, i32 height, i32 weight)
             lower[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(ttf_name[i])));
         lower[len] = '\0';
 
-        if (try_font(dir, lower))
+        if (try_name(dir, lower))
             break;
     }
 

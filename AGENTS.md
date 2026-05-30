@@ -50,6 +50,33 @@ These are no-ops on Linux and break their respective features:
 - `UI_LEFT_MARGIN` overridden to `0.0f` in menu.cpp:33 (original in game.asm was `0.078125f`)
 - `main.cpp` buttons positioned using `UI_LEFT_MARGIN` shifted to left edge
 
+### Row convention for bitmaps vs. text
+- **Loaded bitmaps** (BMF/JPG from AR archives) store row 0 = bottom of image (OpenGL convention).
+- **Text bitmaps** from FreeType render row 0 = top of image (DirectX/FreeType convention).
+- `CopyBitmap`/`StretchCopyBitmap` swap V texcoords (`std::swap(tv_low, tv_high)`) to correct for GL convention.
+- `mmTextNode::Cull()` flips the rendered text surface vertically after `RenderText()` and before `SafeBeginGfx()` to convert FreeType row order to GL row order.
+- Net result: both loaded images and text appear right-side up.
+
+### NavBar visibility
+- `EnableNavBar`/`DisableNavBar` are `ARTS_IMPORT` (declared in `manager.h:92,101`). Implemented in `manager.cpp`:
+  - `DisableNavBar()`: calls `nav_bar_->DeactivateNode()` (clears `NODE_FLAG_ACTIVE` bit 0 → stops rendering).
+  - `EnableNavBar()`: calls `nav_bar_->ActivateNode()` then `nav_bar_->TurnOnPrev()`.
+- Sub-menus (About, Audio, Graphics, Controls) should call `DisableNavBar` when active and `EnableNavBar` when leaving.
+- The `uiNavBar` is a `UIMenu` overlay (menu_id=0) with buttons at absolute screen coordinates:
+  - `mnav_opt` at (0.72, 0.0), `mnav_help` at (0.80, 0.0), `mnav_stow` at (0.88, 0.0), `mnav_exit` at (0.96, 0.0)
+  - `mnav_prev` at (0.0, 0.9) — hidden via `SetPrevPos(0,0)` on sub-menus
+  - NavBar always has `ActivateNode()` in its constructor; only `DisableNavBar` stops it.
+
+### About screen in game.asm
+- Original `AboutMenu` constructor (`game.asm:206689-206816`):
+  - Background bitmap: `"credits"` (PATCH: uses credits image instead of original)
+  - Hotspot: `"Credits"` at (0.1, 0.1, 0.5, 0.5)
+  - Done button: `"onav_done"` at (x=0.2, y=0.9) with div_type=4
+  - Product ID label: `"PID Label"` at (x=0.203125, y=0.2708333, w=0.15625, h=0.0375, font=20)
+- `PreSetup`: sets `prev_menu_id_ = 0` (no back navigation), stores simulation timestamp
+- `Update`: checks elapsed time (auto-dismiss after timeout?)
+- No explicit `DisableNavBar` call in AboutMenu (handled externally in original game logic)
+
 ### Video player (`mmvid/videoplayer.cpp`)
 - Uses FFmpeg (libavformat/libavcodec/libswscale) to decode Intel Indeo 5 (IV50) AVI
 - Renders via a temporary `SDL_Renderer` before OpenGL pipeline init
@@ -118,3 +145,10 @@ The vehicle selection screen (`IDM_VEHICLE`, `veh_back`) shows no 3D car. The fu
 - **Intro video**: Implemented `PlayIntroVideo()` using FFmpeg + SDL renderer. Plays before OpenGL pipeline init. Skippable via keypress/mouse click. Probes multiple paths (`game/logos.avi`, `logos.avi`).
 - **Video letterbox + audio decode**: Added `SDL_SetRenderLogicalPresentation` for aspect-ratio-correct playback. Replaced raw-packet audio feed with FFmpeg audio codec decode + auto-format detection (U8/S16/S32/F32, any channels/rate).
 - **KeyboardAction/MouseAction null checks**: Added null-pointer guards in `UIMenu::KeyboardAction()` and `UIMenu::MouseAction()` to prevent segfault on menus with no widgets (e.g., placeholder Vehicle menu).
+- **Font TTF names fixed**: 1560.ar stores fonts as `FONT/GIL_____`, `FONT/GILB____`, `FONT/BROADW` (no `.TTF` extension). Code was looking for `GIL_____.TTF` etc., causing VFS lookup to fail and `mmFont::Create()` to return null → all text silent. Removed `.TTF` from hardcoded names in `mmtext_freetype.cpp:478-493`, added fallback that tries appending `.TTF` for host filesystem compatibility.
+- **Text surface flip**: Added vertical row-flip in `mmTextNode::Cull()` after `RenderText()` and before `SafeBeginGfx()` (`mmtext.cpp:69-86`). FreeType renders row 0 = top-of-text, but the GL pipeline expects row 0 = bottom-of-image (same as loaded BMF/JPG). The flip + CopyBitmap's V texcoord swap gives correct text.
+- **CopyBitmap swap universal**: Removed `is_wayland` guard — `std::swap(tv_low, tv_high)` now always applied in both `CopyBitmap` and `StretchCopyBitmap` (`glpipe.cpp`). Loaded AR images store row 0 = bottom (GL convention).
+- **NavBar hiding on About**: Implemented `MenuManager::DisableNavBar()`/`EnableNavBar()` via `DeactivateNode()`/`ActivateNode()` + `TurnOnPrev()` (`manager.cpp:619-632`). About screen calls `DisableNavBar()` in `PreSetup()`, `EnableNavBar()` in `PostSetup()`.
+- **Done button position**: Fixed to `(0.2f, 0.9f)` with `div_type=4` matching original game.asm (`placeholder_opts.cpp:109`).
+- **Product ID text position**: Adjusted to `(0.27f, 0.30f, 0.12f, 0.032f)` matching original menu-local `(0.203125, 0.2708333, 0.15625, 0.0375)` converted to screen-space (`placeholder_opts.cpp:114`).
+- **Scrolling credits on About screen**: Loads `ABOUT_CRED` (ui.ar) or fallback `CREDITS` bitmap. Scrolls at 50 px/s after 1.5s delay. Overrides `Update()` (computes scroll, calls `CullMgr()->DeclareBitmap`) and `Cull()` (renders wrapped CopyBitmap in two parts if scrolled past end). Positioned at screen `(0.1*w, 0.1*h)` with visible height `0.5*h` matching original hotspot `(0.1, 0.1, 0.5, 0.5)`.

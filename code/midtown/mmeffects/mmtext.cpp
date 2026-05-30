@@ -65,6 +65,26 @@ void mmTextNode::Cull()
         surface->Load();
 
         RenderText(surface, lines_.get(), line_count_, enabled_lines_);
+
+        // Flip surface vertically: FreeType renders top-to-bottom (row 0 = top),
+        // but textures expect bottom-to-top (row 0 = bottom) to match GL convention.
+        {
+            u32 h = surface->Height;
+            i32 pitch = std::abs(surface->Pitch);
+            u8* data = static_cast<u8*>(surface->Surface);
+            for (u32 i = 0; i < h / 2; ++i)
+            {
+                u8* a = data + i * pitch;
+                u8* b = data + (h - 1 - i) * pitch;
+                for (i32 j = 0; j < pitch; ++j)
+                {
+                    u8 tmp = a[j];
+                    a[j] = b[j];
+                    b[j] = tmp;
+                }
+            }
+        }
+
         text_bitmap_->EndGfx();
         text_bitmap_->SafeBeginGfx();
 

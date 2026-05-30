@@ -20,6 +20,8 @@
 
 #include "mmwidget/menu.h"
 
+#include "agi/bitmap.h"
+
 enum
 {
     IDC_PLACEHOLDER_DONE = 200,
@@ -59,4 +61,16 @@ public:
     ~AboutOptionMenu() override = default;
     void PreSetup() override;
     void PostSetup() override;
+    void Update() override;
+    void Cull() override;
+
+private:
+    Rc<agiBitmap> credits_;
+    f32 credits_start_ {0.0f};
+    i32 credits_x_ {0};
+    i32 credits_y_ {0};
+    i32 credits_width_ {0};
+    i32 credits_height_ {0};
+    i32 credits_vheight_ {0};
+    i32 credits_scroll_ {0};
 };
